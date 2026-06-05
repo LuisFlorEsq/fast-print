@@ -1,0 +1,10 @@
+[project]
+name = "fast-print"
+version = "0.1.0"
+description = "A lightweight CLI and automation tool designed to prepare images and documents for printing without the overhead of heavy office suites"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "click>=8.4.1",
+    "pillow>=12.2.0",
+]
