@@ -1,8 +1,8 @@
-import os
 from PIL import Image
+from src.config import INCH_PER_CM, TARGET_DPI
 
 
-def cm_to_pixels(cm: float, dpi: int = 300) -> int:
+def cm_to_pixels(cm: float, dpi: int = TARGET_DPI) -> int:
     """
     Converts a size in centimeters to pixels based on the DPI
 
@@ -14,12 +14,10 @@ def cm_to_pixels(cm: float, dpi: int = 300) -> int:
         int: Output pixels
     """
 
-    INCH_PER_CM = 2.54
-
     return int((cm / INCH_PER_CM) * dpi)
 
 
-def resize_image_to_cm(input_path: str, width_cm: float = None, height_cm: float = None, dpi: int = 300) -> Image.Image:
+def resize_image_to_cm(input_path: str, width_cm: float = None, height_cm: float = None, dpi: int = TARGET_DPI) -> Image.Image:
     """
     Open an image and resize it to exact centimeters
     Mantains aspect relation when only a dimension is given
@@ -58,7 +56,7 @@ def resize_image_to_cm(input_path: str, width_cm: float = None, height_cm: float
         return resized_img
 
 
-def save_image_for_printing(img: Image.Image, output_path: str, dpi: int = 300) -> None:
+def save_image_for_printing(img: Image.Image, output_path: str, dpi: int = TARGET_DPI) -> None:
     """
     Save the Image object inserting the DPI metadata correctly
 
@@ -67,5 +65,5 @@ def save_image_for_printing(img: Image.Image, output_path: str, dpi: int = 300) 
         output_path (str): Path to save the image.
         dpi (int, optional): Dots per Inch. Defaults to 300.
     """
-    
+
     img.save(output_path, dpi=(dpi, dpi))
