@@ -5,6 +5,7 @@ from PIL import Image
 
 from src.core.image import resize_image_to_cm, save_image_for_printing
 from src.core.grid import create_grid_canvas
+from src.core.printer import send_to_system_printer
 from src.config import IMAGE_EXTENSIONS
 
 
@@ -13,10 +14,11 @@ from src.config import IMAGE_EXTENSIONS
 @click.option('--width', '-w', type=float, help='Ancho en centímetros (cm).')
 @click.option('--height', '-h', type=float, help='Alto en centímetros (cm).')
 @click.option('--grid', '-g', type=int, help='Numero de espacios en la cuadricula (ej. 2, 4, 6)')
-@click.option('--page-type', '-p', default='letter', type=click.Choice(['letter', 'a4']), help='Tipo de pagina para la cuadricula')
+@click.option('--page-type', default='letter', type=click.Choice(['letter', 'a4']), help='Tipo de pagina para la cuadricula')
 @click.option('--dpi', default=300, help='DPI de la impresora (Por defecto 300).')
 @click.option('--output', '-o', type=click.Path(), help='Ruta de guardado personalizada.')
-def main(path, width, height, grid, page_type,  dpi, output):
+@click.option('--print', '-p', 'print_now', is_flag=True, default=False, help='Manda el archivo directamente a la impresora fisica.')
+def main(path, width, height, grid, page_type,  dpi, output, print_now):
     """Fast Print CLI: Herramienta ultra-ligera para preparar archivos de impresión."""
     try:
 
@@ -60,6 +62,11 @@ def main(path, width, height, grid, page_type,  dpi, output):
                 save_image_for_printing(
                     img=grid_canvas, output_path=final_output, dpi=dpi)
                 click.echo(f"Pagina {page_number} guardada: {out_name}")
+                
+                # Native silent printer if triggered
+                if print_now:
+                    click.echo(f"Enviando página {page_number} al spooler de Windows")
+                    send_to_system_printer(file_path=final_output)
 
                 # Close images to free memory buffers
                 for img in chunk_images:
@@ -100,6 +107,11 @@ def main(path, width, height, grid, page_type,  dpi, output):
             
             else:
                 raise click.UsageError("Debes especificar dimensiones (--width/--height) o una cuadricula (--grid)")
+            
+            
+            if print_now:
+                click.echo(f"Enviando archivo final a la impresora predeterminada...")
+                send_to_system_printer(file_path=output)
         
 
     except Exception as e:
