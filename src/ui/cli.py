@@ -1,5 +1,4 @@
 import os
-import sys
 import click
 from PIL import Image
 
@@ -62,11 +61,17 @@ def main(path, width, height, grid, page_type,  dpi, output, print_now):
                 save_image_for_printing(
                     img=grid_canvas, output_path=final_output, dpi=dpi)
                 click.echo(f"Pagina {page_number} guardada: {out_name}")
-                
+
                 # Native silent printer if triggered
                 if print_now:
-                    click.echo(f"Enviando página {page_number} al spooler de Windows")
-                    send_to_system_printer(file_path=final_output)
+                    click.echo(
+                        f"Enviando página {page_number} al spooler de Windows")
+                    click.echo(
+                        f"Monitoreando la cola de impresión, Por favor espera")
+                    send_to_system_printer(
+                        file_path=final_output, watch_status=True)
+                    click.secho(
+                        f"¡Impresión física completada correctamente en el hardware!", fg="cyan")
 
                 # Close images to free memory buffers
                 for img in chunk_images:
@@ -80,39 +85,50 @@ def main(path, width, height, grid, page_type,  dpi, output, print_now):
 
             # Subcase A: Single File Grid (Duplicate an image into N slots)
             if grid:
-                click.echo(f"Duplicando imagen en cuadricula {grid}-up: {os.path.basename(path)}")
-                
+                click.echo(
+                    f"Duplicando imagen en cuadricula {grid}-up: {os.path.basename(path)}")
+
                 with Image.open(path) as single_img:
                     images_batch = [single_img] * grid
-                    grid_canvas = create_grid_canvas(images=images_batch, grid_size=grid, page_type=page_type, dpi=dpi)
-                    
+                    grid_canvas = create_grid_canvas(
+                        images=images_batch, grid_size=grid, page_type=page_type, dpi=dpi)
+
                 if not output:
                     base, ext = os.path.splitext(path)
                     output = f"{base}_grid_{grid}{ext}"
-                    
-                save_image_for_printing(img=grid_canvas, output_path=output, dpi=dpi)
-                click.secho(f"Cuadricula guardara con éxito en: {output}", fg="green")
-                
+
+                save_image_for_printing(
+                    img=grid_canvas, output_path=output, dpi=dpi)
+                click.secho(
+                    f"Cuadricula guardara con éxito en: {output}", fg="green")
+
             # Subcase B: Standard Single Image Resizing
-                
+
             elif width or height:
-                processed_img = resize_image_to_cm(input_path=path, width_cm=width, height_cm=height, dpi=dpi)
-                
+                processed_img = resize_image_to_cm(
+                    input_path=path, width_cm=width, height_cm=height, dpi=dpi)
+
                 if not output:
                     base, ext = os.path.splitext(path)
                     output = f"{base}_print{ext}"
-                    
-                save_image_for_printing(img=processed_img, output_path=output, dpi=dpi)
-                click.secho(f"Imagen redimensionada con éxito en {output}", fg="green")
-            
+
+                save_image_for_printing(
+                    img=processed_img, output_path=output, dpi=dpi)
+                click.secho(
+                    f"Imagen redimensionada con éxito en {output}", fg="green")
+
             else:
-                raise click.UsageError("Debes especificar dimensiones (--width/--height) o una cuadricula (--grid)")
-            
-            
+                raise click.UsageError(
+                    "Debes especificar dimensiones (--width/--height) o una cuadricula (--grid)")
+
             if print_now:
-                click.echo(f"Enviando archivo final a la impresora predeterminada...")
-                send_to_system_printer(file_path=output)
-        
+                click.echo(
+                    f"Enviando archivo final a la impresora predeterminada...")
+                click.echo(
+                    f"Monitoreando la cola de impresión, Por favor espera")
+                send_to_system_printer(file_path=output, watch_status=True)
+                click.secho(
+                    f"¡Impresión física completada correctamente en el hardware!", fg="cyan")
 
     except Exception as e:
         click.secho(f"Error interno en el procesamiento: {e}", fg="red")
