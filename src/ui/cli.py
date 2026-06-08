@@ -4,12 +4,13 @@ from PIL import Image
 
 from src.core.image import resize_image_to_cm, save_image_for_printing
 from src.core.grid import create_grid_canvas
-from src.core.printer import send_to_system_printer
+
+from src.core.printer import send_to_system_printer, get_available_printers
 from src.config import IMAGE_EXTENSIONS
 
 
 @click.command()
-@click.argument('path', type=click.Path(exists=True))
+@click.argument('path', type=click.Path(exists=True), required = False)
 @click.option('--width', '-w', type=float, help='Ancho en centímetros (cm).')
 @click.option('--height', '-h', type=float, help='Alto en centímetros (cm).')
 @click.option('--grid', '-g', type=int, help='Numero de espacios en la cuadricula (ej. 2, 4, 6)')
@@ -17,9 +18,23 @@ from src.config import IMAGE_EXTENSIONS
 @click.option('--dpi', default=300, help='DPI de la impresora (Por defecto 300).')
 @click.option('--output', '-o', type=click.Path(), help='Ruta de guardado personalizada.')
 @click.option('--print', '-p', 'print_now', is_flag=True, default=False, help='Manda el archivo directamente a la impresora fisica.')
-def main(path, width, height, grid, page_type,  dpi, output, print_now):
+@click.option('--printer', '-d', type=str, help='Nombre de la impresora específica a usar (Device).')
+@click.option('--list-printers', is_flag=True, default=False, help='Muestra todas las impresoras configuradas en Windows.')
+def main(path, width, height, grid, page_type,  dpi, output, print_now, printer, list_printers):
     """Fast Print CLI: Herramienta ultra-ligera para preparar archivos de impresión."""
     try:
+
+        if list_printers:
+            printers = get_available_printers()
+            click.secho(
+                "\nImpresoras instaladas detectadas en Windows 11:", fg="cyan", bold=True)
+            for idx, p_name in enumerate(printers, 1):
+                click.echo(f" {idx}. {p_name}")
+            click.echo("")
+            return
+
+        if not path:
+            raise click.UsageError("Falta el argumento de ruta del archivo o carpeta.")
 
         # CASE 1: Processing a single Folder (Grid-Multi)
         if os.path.isdir(path):
@@ -30,7 +45,7 @@ def main(path, width, height, grid, page_type,  dpi, output, print_now):
             click.echo(f"Escaneando carpeta de forma ligera: {path}")
 
             # Get all valid images in the directory
-            file_list = [
+            file_list=[
                 os.path.join(path, f) for f in os.listdir(path)
                 if f.lower().endswith(IMAGE_EXTENSIONS)
             ]
@@ -44,19 +59,19 @@ def main(path, width, height, grid, page_type,  dpi, output, print_now):
                 f"Se encontraron {len(file_list)} imágenes. Generando páginas de cuadrícula...")
 
             # Process files in chunks matching the grid size
-            page_number = 1
+            page_number=1
             for i in range(0, len(file_list), grid):
-                chunk_paths = file_list[i:i + grid]
+                chunk_paths=file_list[i:i + grid]
 
                 # Lazy load images
-                chunk_images = [Image.open(p) for p in chunk_paths]
-                grid_canvas = create_grid_canvas(
+                chunk_images=[Image.open(p) for p in chunk_paths]
+                grid_canvas=create_grid_canvas(
                     images=chunk_images, grid_size=grid, page_type=page_type, dpi=dpi)
 
                 # Determine output path for each generated page
-                out_dir = output if output else path
-                out_name = f"grid_page_{page_number}_{page_type}.png"
-                final_output = os.path.join(out_dir, out_name)
+                out_dir=output if output else path
+                out_name=f"grid_page_{page_number}_{page_type}.png"
+                final_output=os.path.join(out_dir, out_name)
 
                 save_image_for_printing(
                     img=grid_canvas, output_path=final_output, dpi=dpi)
@@ -65,13 +80,9 @@ def main(path, width, height, grid, page_type,  dpi, output, print_now):
                 # Native silent printer if triggered
                 if print_now:
                     click.echo(
-                        f"Enviando página {page_number} al spooler de Windows")
-                    click.echo(
-                        f"Monitoreando la cola de impresión, Por favor espera")
+                        f"Enviando a: {printer if printer else 'Impresora Predeterminada'}...")
                     send_to_system_printer(
                         file_path=final_output, watch_status=True)
-                    click.secho(
-                        f"¡Impresión física completada correctamente en el hardware!", fg="cyan")
 
                 # Close images to free memory buffers
                 for img in chunk_images:
@@ -89,13 +100,13 @@ def main(path, width, height, grid, page_type,  dpi, output, print_now):
                     f"Duplicando imagen en cuadricula {grid}-up: {os.path.basename(path)}")
 
                 with Image.open(path) as single_img:
-                    images_batch = [single_img] * grid
-                    grid_canvas = create_grid_canvas(
+                    images_batch=[single_img] * grid
+                    grid_canvas=create_grid_canvas(
                         images=images_batch, grid_size=grid, page_type=page_type, dpi=dpi)
 
                 if not output:
-                    base, ext = os.path.splitext(path)
-                    output = f"{base}_grid_{grid}{ext}"
+                    base, ext=os.path.splitext(path)
+                    output=f"{base}_grid_{grid}{ext}"
 
                 save_image_for_printing(
                     img=grid_canvas, output_path=output, dpi=dpi)
@@ -105,12 +116,12 @@ def main(path, width, height, grid, page_type,  dpi, output, print_now):
             # Subcase B: Standard Single Image Resizing
 
             elif width or height:
-                processed_img = resize_image_to_cm(
+                processed_img=resize_image_to_cm(
                     input_path=path, width_cm=width, height_cm=height, dpi=dpi)
 
                 if not output:
-                    base, ext = os.path.splitext(path)
-                    output = f"{base}_print{ext}"
+                    base, ext=os.path.splitext(path)
+                    output=f"{base}_print{ext}"
 
                 save_image_for_printing(
                     img=processed_img, output_path=output, dpi=dpi)
@@ -123,9 +134,7 @@ def main(path, width, height, grid, page_type,  dpi, output, print_now):
 
             if print_now:
                 click.echo(
-                    f"Enviando archivo final a la impresora predeterminada...")
-                click.echo(
-                    f"Monitoreando la cola de impresión, Por favor espera")
+                    f"Enviando a: {printer if printer else 'Impresora Predeterminada'}...")
                 send_to_system_printer(file_path=output, watch_status=True)
                 click.secho(
                     f"¡Impresión física completada correctamente en el hardware!", fg="cyan")
