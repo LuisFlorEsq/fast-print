@@ -8,3 +8,4 @@ PAGE_SIZES = {
     "a4": (21.0, 29.7)
 }
 IMAGE_EXTENSIONS = ('.jpg', '.jpeg', '.png', '.bmp', '.webp')
+DOC_EXTENSIONS = ('.pdf', '.docx')
