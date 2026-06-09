@@ -301,7 +301,7 @@ class FastPrintApp:
 
                     if print_now:
                         send_to_system_printer(
-                            file_path=final_output, printer_name=printer, watch_status=True)
+                            file_path=final_output, printer_name=printer, page_type=page)
 
                     for img in chunk_images:
                         img.close()
@@ -315,7 +315,7 @@ class FastPrintApp:
                 if path.lower().endswith('.pdf'):
                     if print_now:
                         send_to_system_printer(
-                            file_path=path, printer_name=printer, watch_status=True)
+                            file_path=path, printer_name=printer, page_type=page)
                     else:
                         raise ValueError(
                             "Para procesar un PDF individual debes activar la impresión directa.")
@@ -332,7 +332,7 @@ class FastPrintApp:
                             img=canvas, output_path=final_output, dpi=dpi)
                         if print_now:
                             send_to_system_printer(
-                                file_path=final_output, printer_name=printer, watch_status=True)
+                                file_path=final_output, printer_name=printer, page_type=page)
 
                     else:
                         for idx, pg in enumerate(pages, 1):
@@ -341,7 +341,7 @@ class FastPrintApp:
                                 img=pg, output_path=final_output, dpi=dpi)
                             if print_now:
                                 send_to_system_printer(
-                                    file_path=final_output, printer_name=printer, watch_status=True)
+                                    file_path=final_output, printer_name=printer, page_type=page)
 
                 # --- Image Processing flow ---
                 else:
@@ -365,12 +365,13 @@ class FastPrintApp:
 
                     if print_now and final_output and os.path.exists(final_output):
                         send_to_system_printer(
-                            file_path=final_output, printer_name=printer, watch_status=True)
+                            file_path=final_output, printer_name=printer, page_type=page)
 
             self.root.after(0, self._handle_success)
 
         except Exception as e:
-            self.root.after(0, lambda: self._hadle_error(str(e)))
+            error_msg = str(e)
+            self.root.after(0, lambda err=error_msg: self._handle_error(err_msg=error_msg))
 
     def _handle_success(self):
         self.action_btn.config(state="normal")

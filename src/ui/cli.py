@@ -52,7 +52,7 @@ def main(path, width, height, grid, page_type,  dpi, output, print_now, printer,
                     click.echo(
                         f"Enviando PDF original directamente al spooler de hardware...")
                     send_to_system_printer(
-                        file_path=path, printer_name=printer, watch_status=True)
+                        file_path=path, printer_name=printer, page_type=page_type)
                     click.secho(
                         f"¡PDF enviado e impreso con éxito!.", fg="green")
                 else:
@@ -80,7 +80,7 @@ def main(path, width, height, grid, page_type,  dpi, output, print_now, printer,
 
                     if print_now:
                         send_to_system_printer(
-                            file_path=final_output, printer_name=printer, watch_status=True)
+                            file_path=final_output, printer_name=printer, page_type=page_type)
                     click.secho(
                         f"Cuadricula de Word completada en: {final_output}", fg="green")
 
@@ -92,7 +92,7 @@ def main(path, width, height, grid, page_type,  dpi, output, print_now, printer,
                             img=page_img, output_path=final_output, dpi=dpi)
                         if print_now:
                             send_to_system_printer(
-                                file_path=final_output, printer_name=printer, watch_status=True)
+                                file_path=final_output, printer_name=printer, page_type=page_type)
                     click.secho(
                         f"Páginas de Word impresas/guardadas de forma limpia.", fg="green")
 
@@ -145,7 +145,7 @@ def main(path, width, height, grid, page_type,  dpi, output, print_now, printer,
                 # Native silent printer if triggered
                 if print_now:
                     send_to_system_printer(
-                        file_path=final_output, printer_name=printer, watch_status=True)
+                        file_path=final_output, printer_name=printer, page_type=page_type)
 
                 # Close images to free memory buffers
                 for img in chunk_images:
@@ -201,7 +201,7 @@ def main(path, width, height, grid, page_type,  dpi, output, print_now, printer,
 
             if print_now:
                 send_to_system_printer(
-                    file_path=output, printer_name=printer, watch_status=True)
+                    file_path=output, printer_name=printer, page_type=page_type)
                 click.secho(
                     f"¡Impresión física completada correctamente en el hardware!", fg="cyan")
 
