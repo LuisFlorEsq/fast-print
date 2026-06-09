@@ -1,7 +1,7 @@
 # -- Constants ---
 
 INCH_PER_CM = 2.54
-TARGET_DPI = 300
+TARGET_DPI = 600
 
 PAGE_SIZES = {
     "letter": (21.59, 27.94),

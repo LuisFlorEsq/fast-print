@@ -359,7 +359,7 @@ class FastPrintApp:
                                 img=canvas, output_path=final_output, dpi=dpi)
                     else:
                         img = resize_image_to_cm(
-                            path, width_cm=w_cm, height_cm=h_cm, dpi=dpi)
+                            path, width_cm=w_cm, height_cm=h_cm, page_type=page, dpi=dpi)
                         save_image_for_printing(
                             img=img, output_path=final_output, dpi=dpi)
 

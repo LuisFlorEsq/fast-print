@@ -184,7 +184,7 @@ def main(path, width, height, grid, page_type,  dpi, output, print_now, printer,
 
             elif width or height:
                 processed_img = resize_image_to_cm(
-                    input_path=path, width_cm=width, height_cm=height, dpi=dpi)
+                    input_path=path, width_cm=width, height_cm=height, page_type=page_type, dpi=dpi)
 
                 if not final_output:
                     base, ext = os.path.splitext(path)

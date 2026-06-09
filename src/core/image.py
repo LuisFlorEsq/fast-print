@@ -1,5 +1,5 @@
 from PIL import Image
-from src.config import INCH_PER_CM, TARGET_DPI
+from src.config import INCH_PER_CM, TARGET_DPI, PAGE_SIZES
 
 
 def cm_to_pixels(cm: float, dpi: int = TARGET_DPI) -> int:
@@ -17,7 +17,7 @@ def cm_to_pixels(cm: float, dpi: int = TARGET_DPI) -> int:
     return int((cm / INCH_PER_CM) * dpi)
 
 
-def resize_image_to_cm(input_path: str, width_cm: float = None, height_cm: float = None, dpi: int = TARGET_DPI) -> Image.Image:
+def resize_image_to_cm(input_path: str, width_cm: float = None, height_cm: float = None, page_type: str = "letter", dpi: int = TARGET_DPI) -> Image.Image:
     """
     Open an image and resize it to exact centimeters
     Mantains aspect relation when only a dimension is given
@@ -31,6 +31,13 @@ def resize_image_to_cm(input_path: str, width_cm: float = None, height_cm: float
     Returns:
         Image.Image: Pillow Image object, lives in-memory.
     """
+
+    # Create the canvas to paste the resized image
+    page_dims_cm = PAGE_SIZES.get(page_type.lower(), PAGE_SIZES[page_type])
+    page_w = cm_to_pixels(page_dims_cm[0], dpi)
+    page_h = cm_to_pixels(page_dims_cm[1], dpi)
+
+    canvas = Image.new("RGB", (page_w, page_h), "white")
 
     if not width_cm and not height_cm:
         raise ValueError("You must specify width or height in centimeters")
@@ -49,11 +56,14 @@ def resize_image_to_cm(input_path: str, width_cm: float = None, height_cm: float
             target_w = int(target_h * aspect_ratio)
 
         resized_img = img.resize((target_w, target_h),
-                                 Image.Resampling.BILINEAR)
-
+                                 Image.Resampling.LANCZOS)
         resized_img.load()
+        
+        # Paste the resized image into the canvas
+        margin = cm_to_pixels(2.0, dpi=dpi)
+        canvas.paste(resized_img, (margin, margin))
 
-        return resized_img
+        return canvas
 
 
 def save_image_for_printing(img: Image.Image, output_path: str, dpi: int = TARGET_DPI) -> None:
