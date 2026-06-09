@@ -1,9 +1,6 @@
-import os
-import sys
 from typing import List
 
 from docx import Document
-from pypdf import PdfReader
 from PIL import Image, ImageDraw, ImageFont
 
 from src.core.image import cm_to_pixels
