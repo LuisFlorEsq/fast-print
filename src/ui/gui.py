@@ -17,15 +17,15 @@ from src.config import (IMAGE_EXTENSIONS, DOC_EXTENSIONS, TARGET_DPI)
 
 AVAILABLE_EXTENSIONS = [
     (
-        "Todos los archivos soportados", 
+        "Todos los archivos soportados",
         " ".join(f"*{ext}" for ext in (IMAGE_EXTENSIONS + DOC_EXTENSIONS))
     ),
     (
-        "Imágenes", 
+        "Imágenes",
         " ".join(f"*{ext}" for ext in IMAGE_EXTENSIONS)
     ),
     (
-        "Documentos", 
+        "Documentos",
         " ".join(f"*{ext}" for ext in DOC_EXTENSIONS)
     )
 ]
@@ -44,6 +44,7 @@ class FastPrintApp:
 
         # Application State
         self.selected_path = tk.StringVar()
+        self.is_directory = tk.BooleanVar(value=False)
         self.target_printer = tk.StringVar()
         self.page_type = tk.StringVar(value="letter")
         self.is_grid_enabled = tk.BooleanVar(value=False)
@@ -60,7 +61,7 @@ class FastPrintApp:
         main_frame.pack(fill=tk.BOTH, expand=True)
 
         # ---------------------------------------------------------------------
-        # SECTION 1: File Selection Context
+        # SECTION 1: Source Selection Context (File or Folder)
         # ---------------------------------------------------------------------
         file_lf = ttk.LabelFrame(
             main_frame, text="Archivo o Carpeta Origen", padding="10")
@@ -70,9 +71,13 @@ class FastPrintApp:
             file_lf, textvariable=self.selected_path, width=40, state="readonly")
         file_entry.pack(side=tk.LEFT, expand=True, fill=tk.X, padx=5)
 
-        browse_btn = ttk.Button(file_lf, text="Buscar...",
-                                command=self._handle_browse)
-        browse_btn.pack(side=tk.RIGHT)
+        browse_file_btn = ttk.Button(
+            file_lf, text="Archivo...", command=self._handle_browse_file)
+        browse_file_btn.pack(side=tk.LEFT, padx=2)
+
+        browse_dir_btn = ttk.Button(file_lf, text="Carpeta...",
+                                    command=self._handle_browse_directory)
+        browse_dir_btn.pack(side=tk.LEFT, padx=2)
 
         # ---------------------------------------------------------------------
         # SECTION 2: Layout processing configuration
@@ -97,13 +102,13 @@ class FastPrintApp:
         grid_frame = ttk.Frame(config_lf)
         grid_frame.pack(fill=tk.X, pady=5)
 
-        grid_chk = ttk.Checkbutton(
+        self.grid_chk = ttk.Checkbutton(
             grid_frame,
             text="Activar Cuadrícula N-up (Multi-copias)",
             variable=self.is_grid_enabled,
             command=self._toggle_grid_options
         )
-        grid_chk.pack(side=tk.LEFT)
+        self.grid_chk.pack(side=tk.LEFT)
 
         self.grid_combo = ttk.Combobox(
             grid_frame, values=["2", "4", "6", "8"], width=5, state="disabled")
@@ -114,7 +119,8 @@ class FastPrintApp:
         page_frame = ttk.Frame(config_lf)
         page_frame.pack(fill=tk.X, pady=5)
 
-        ttk.Label(page_frame, text="Tamaño de papel:").pack(side=tk.LEFT, padx=2)
+        ttk.Label(page_frame, text="Tamaño de papel:").pack(
+            side=tk.LEFT, padx=2)
         ttk.Radiobutton(page_frame, text="Carta (Letter)",
                         variable=self.page_type, value="letter").pack(side=tk.LEFT, padx=10)
         ttk.Radiobutton(page_frame, text="A4", variable=self.page_type,
@@ -147,21 +153,65 @@ class FastPrintApp:
             "Segoe UI", 9, "italic"), foreground="gray")
         self.status_lbl.pack(anchor=tk.W, pady=(5, 0))
 
-    def _handle_browse(self):
+    def _handle_browse_file(self):
         """
-        Asks user for file layout type
+        Handles individual file browsing selection
         """
         file_path = filedialog.askopenfilename(filetypes=AVAILABLE_EXTENSIONS)
         if file_path:
             self.selected_path.set(file_path)
-            if file_path.lower().endswith(('pdf', '.docx')):
-                self.width_ent.delete(0, tk.END)
-                self.height_ent.delete(0, tk.END)
-                self.width_ent.config(state="disabled")
-                self.height_ent.config(state="disabled")
-            else:
-                self.width_ent.config(state="normal")
-                self.height_ent.config(state="normal")
+            self.is_directory.set(False)
+            self._adapt_ux_fields(
+                is_folder=False, is_doc=file_path.lower().endswith(('.pdf', '.docx')))
+
+    def _handle_browse_directory(self):
+        """
+        Handles complete folder scanning selection
+        """
+        dir_path = filedialog.askdirectory()
+        if dir_path:
+            self.selected_path.set(dir_path)
+            self.is_directory.set(True)
+            self._adapt_ux_fields(is_folder=True, is_doc=False)
+
+    def _adapt_ux_fields(self, is_folder: bool, is_doc: bool):
+        """
+        Best practices for clean interface workflow constraints
+
+        Args:
+            is_folder (bool): Flag to detect Folder/Directory flow
+            is_doc (bool): Flag to detect document flow
+        """
+
+        if is_folder:
+            # Building automatic grids
+            self.width_ent.delete(0, tk.END)
+            self.height_ent.delete(0, tk.END)
+
+            self.width_ent.config(state="disabled")
+            self.height_ent.config(state="disabled")
+
+            self.is_grid_enabled.set(True)
+            self.grid_combo.config(state="readonly")
+
+        elif is_doc:
+            # Word or PDF documents have predefined text metrics
+            self.width_ent.delete(0, tk.END)
+            self.height_ent.delete(0, tk.END)
+
+            self.width_ent.config(state="disabled")
+            self.height_ent.config(state="disabled")
+
+            self.is_grid_enabled.set(False)
+            self.grid_combo.config(state="disabled")
+
+        else:
+            # Standard simple image
+            self.width_ent.config(state="normal")
+            self.height_ent.config(state="normal")
+
+            self.is_grid_enabled.set(False)
+            self.grid_combo.config(state="disabled")
 
     def _toggle_grid_options(self):
         """
@@ -170,7 +220,12 @@ class FastPrintApp:
         if self.is_grid_enabled.get():
             self.grid_combo.config(state="readonly")
         else:
-            self.grid_combo.config(state="disabled")
+            if self.is_directory.get():
+                self.is_grid_enabled.set(True)
+                messagebox.showwarning(
+                    f"Restriccion", "El procesamiento de carpetas requiere activar la cuadricula")
+            else:
+                self.grid_combo.config(state="disabled")
 
     def _load_printers(self):
         """
@@ -218,70 +273,118 @@ class FastPrintApp:
             # Execution Papeline
             final_output = None
 
-            # --- Document Flow (pdf, docx) ---
-            if path.lower().endswith('.pdf'):
-                if not grid_enabled and print_now:
-                    send_to_system_printer(
-                        file_path=path, printer_name=printer, watch_status=True)
-                else:
+            # ---------------------------------------------------------------------
+            # PIPELINE FLOW 1: Folder Batch processing
+            # ---------------------------------------------------------------------
+            if self.is_directory.get():
+                file_list = [
+                    os.path.join(path, f) for f in os.listdir(path)
+                    if f.lower().endswith(IMAGE_EXTENSIONS)
+                ]
+
+                if not file_list:
                     raise ValueError(
-                        "Para procesar un PDF en cuadricula usa el comando CLI o conviertelo previamente")
+                        f"No se encontraron imágenes compatibles (.jpg, .png) en la carpeta")
 
-            elif path.lower().endswith('.docx'):
-                text = extract_text_from_docx(file_path=path)
-                pages = convert_text_to_printable_images(text, dpi=dpi)
-                final_output = f"{os.path.splitext(path)[0]}_temp_print.png"
+                page_number = 1
+                for i in range(0, len(file_list), grid_size):
+                    chunk_paths = file_list[i:i + grid_size]
+                    chunk_images = [Image.open(path) for path in chunk_paths]
 
-                if grid_enabled:
-                    canvas = create_grid_canvas(
-                        images=pages, grid_size=grid_size, page_type=page, dpi=dpi)
+                    grid_canvas = create_grid_canvas(
+                        images=chunk_images, grid_size=grid_size, page_type=page, dpi=dpi)
+                    final_output = os.path.join(
+                        path, f"gui_grid_page_{page_number}_{page}.png")
+
                     save_image_for_printing(
-                        img=canvas, output_path=final_output, dpi=dpi)
+                        img=grid_canvas, output_path=final_output, dpi=dpi)
+
                     if print_now:
                         send_to_system_printer(
                             file_path=final_output, printer_name=printer, watch_status=True)
 
-                else:
-                    for idx, pg in enumerate(pages, 1):
-                        final_output = f"{os.path.splitext(path)[0]}_page_{idx}.png"
-                        save_image_for_printing(img=pg, output_path=final_output, dpi=dpi)
-                        if print_now:
-                            send_to_system_printer(file_path=final_output, printer_name=printer, watch_status=True)
-            
-            # --- Image Processing flow ---
+                    for img in chunk_images:
+                        img.close()
+                    page_number += 1
+
+            # ---------------------------------------------------------------------
+            # PIPELINE FLOW 2: Individual Document or Image processing
+            # ---------------------------------------------------------------------
             else:
-                w_cm = float(self.width_ent.get()) if self.width_ent.get() else None
-                h_cm = float(self.height_ent.get()) if self.height_ent.get() else None
-                final_output = f"{os.path.splitext(path)[0]}_processed_gui.png"
-                
-                if grid_enabled:
-                    with Image.open(path) as img:
-                        canvas = create_grid_canvas([img] * grid_size, grid_size=grid_size, page_type=page, dpi=dpi)
-                        save_image_for_printing(img=canvas, output_path=final_output, dpi=dpi)
+                # --- Document Flow (pdf, docx) ---
+                if path.lower().endswith('.pdf'):
+                    if print_now:
+                        send_to_system_printer(
+                            file_path=path, printer_name=printer, watch_status=True)
+                    else:
+                        raise ValueError(
+                            "Para procesar un PDF individual debes activar la impresión directa.")
+
+                elif path.lower().endswith('.docx'):
+                    text = extract_text_from_docx(file_path=path)
+                    pages = convert_text_to_printable_images(text, dpi=dpi)
+
+                    if grid_enabled:
+                        canvas = create_grid_canvas(
+                            images=pages, grid_size=grid_size, page_type=page, dpi=dpi)
+                        final_output = f"{os.path.splitext(path)[0]}_docx_grid.png"
+                        save_image_for_printing(
+                            img=canvas, output_path=final_output, dpi=dpi)
+                        if print_now:
+                            send_to_system_printer(
+                                file_path=final_output, printer_name=printer, watch_status=True)
+
+                    else:
+                        for idx, pg in enumerate(pages, 1):
+                            final_output = f"{os.path.splitext(path)[0]}_page_{idx}.png"
+                            save_image_for_printing(
+                                img=pg, output_path=final_output, dpi=dpi)
+                            if print_now:
+                                send_to_system_printer(
+                                    file_path=final_output, printer_name=printer, watch_status=True)
+
+                # --- Image Processing flow ---
                 else:
-                    img = resize_image_to_cm(path, width_cm=w_cm, height_cm=h_cm, dpi=dpi)
-                    save_image_for_printing(img=img, output_path=final_output, dpi=dpi)
-                
-                if print_now and final_output and os.path.exists(final_output):
-                    send_to_system_printer(file_path=final_output, printer_name=printer, watch_status=True)
-                    
+                    w_cm = float(self.width_ent.get()
+                                 ) if self.width_ent.get() else None
+                    h_cm = float(self.height_ent.get()
+                                 ) if self.height_ent.get() else None
+                    final_output = f"{os.path.splitext(path)[0]}_processed_gui.png"
+
+                    if grid_enabled:
+                        with Image.open(path) as img:
+                            canvas = create_grid_canvas(
+                                [img] * grid_size, grid_size=grid_size, page_type=page, dpi=dpi)
+                            save_image_for_printing(
+                                img=canvas, output_path=final_output, dpi=dpi)
+                    else:
+                        img = resize_image_to_cm(
+                            path, width_cm=w_cm, height_cm=h_cm, dpi=dpi)
+                        save_image_for_printing(
+                            img=img, output_path=final_output, dpi=dpi)
+
+                    if print_now and final_output and os.path.exists(final_output):
+                        send_to_system_printer(
+                            file_path=final_output, printer_name=printer, watch_status=True)
+
             self.root.after(0, self._handle_success)
-            
+
         except Exception as e:
             self.root.after(0, lambda: self._hadle_error(str(e)))
-            
-    
+
     def _handle_success(self):
         self.action_btn.config(state="normal")
-        self.status_lbl.config(text="Estado: ¡Operación completada con éxito en el hardware!", foreground="green")
-        messagebox.showinfo("Éxito", "El documento ha sido procesado e impreso de forma segura.")
+        self.status_lbl.config(
+            text="Estado: ¡Operación completada con éxito en el hardware!", foreground="green")
+        messagebox.showinfo(
+            "Éxito", "El documento ha sido procesado e impreso de forma segura.")
 
     def _handle_error(self, err_msg: str):
         self.action_btn.config(state="normal")
-        self.status_lbl.config(text="Estado: Error en la cola de impresión.", foreground="red")
-        messagebox.showerror("Error de Procesamiento", f"Ocurrió un fallo: {err_msg}")
-                
-                        
+        self.status_lbl.config(
+            text="Estado: Error en la cola de impresión.", foreground="red")
+        messagebox.showerror("Error de Procesamiento",
+                             f"Ocurrió un fallo: {err_msg}")
 
 
 if __name__ == "__main__":
