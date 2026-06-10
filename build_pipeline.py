@@ -44,7 +44,7 @@ def run_pyinstaller_compilation():
         sys.exit(1)
 
     print("Compilacion de binarios exitosa.")
-
+ 
 
 def apply_windows_api_hooks():
     """

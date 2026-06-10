@@ -39,10 +39,11 @@ def create_grid_canvas(images: List[Image.Image], grid_size: int = 4, page_type:
         cols = 2
         rows = grid_size // 2
 
-    margin = 20  # Margin in pixels
+    margin = int(0.5 * (dpi / 2.54))  # Margin between elements
+    edge_margin = int(1.0 * (dpi / 2.54))  # Margin on edges
 
-    slot_w = (canvas_w - (margin * (cols + 1))) // cols
-    slot_h = (canvas_h - (margin * (rows + 1))) // rows
+    slot_w = (canvas_w - (edge_margin * 2) - (margin * (cols - 1))) // cols
+    slot_h = (canvas_h - (edge_margin * 2) - (margin * (rows - 1))) // rows
 
     image_index = 0
     num_images = len(images)
@@ -54,14 +55,28 @@ def create_grid_canvas(images: List[Image.Image], grid_size: int = 4, page_type:
 
             img = images[image_index]
 
-            img.thumbnail((slot_w, slot_h), Image.Resampling.BILINEAR)
+            # --- Get Values for resizing ---
+            orig_w, orig_h = img.size
+            img_aspect = orig_w / orig_h
+            slot_aspect = slot_w / slot_h
 
-            x_offset = margin + c * (slot_w + margin) + \
-                (slot_w - img.width) // 2
-            y_offset = margin + r * (slot_h + margin) + \
-                (slot_h - img.height) // 2
+            if img_aspect > slot_aspect:
+                new_w = slot_w
+                new_h = int(slot_w / img_aspect)
+            else:
+                new_h = slot_h
+                new_w = int(slot_h * img_aspect)
 
-            canvas.paste(img, (x_offset, y_offset))
+            resized_img = img.resize((new_w, new_h), Image.Resampling.BILINEAR)
+
+            x_offset = edge_margin + c * \
+                (slot_w + margin) + (slot_w - new_w) // 2
+            y_offset = edge_margin + r * \
+                (slot_h + margin) + (slot_h - new_h) // 2
+
+            canvas.paste(resized_img, (x_offset, y_offset))
+
+            resized_img.close()
             image_index += 1
-            
+
     return canvas

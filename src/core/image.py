@@ -56,7 +56,7 @@ def resize_image_to_cm(input_path: str, width_cm: float = None, height_cm: float
             target_w = int(target_h * aspect_ratio)
 
         resized_img = img.resize((target_w, target_h),
-                                 Image.Resampling.LANCZOS)
+                                 Image.Resampling.BILINEAR)
         resized_img.load()
         
         # Paste the resized image into the canvas

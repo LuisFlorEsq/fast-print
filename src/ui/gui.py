@@ -1,10 +1,11 @@
 import os
+import gc
+
 import tkinter as tk
 from PIL import Image
 
 from tkinter import ttk, filedialog, messagebox
 from threading import Thread
-
 
 from src.core.image import resize_image_to_cm, save_image_for_printing
 from src.core.grid import create_grid_canvas
@@ -31,6 +32,8 @@ AVAILABLE_EXTENSIONS = [
 
 
 class FastPrintApp:
+    """Core GUI Class that manages the fast print tool workflow and user interactions."""
+
     def __init__(self, root):
         self.root = root
         self.root.title("Fast Print Tool")
@@ -285,6 +288,9 @@ class FastPrintApp:
                     raise ValueError(
                         f"No se encontraron imágenes compatibles (.jpg, .png) en la carpeta")
 
+                output_dir = os.path.join(path, "FastPrint_Output")
+                os.makedirs(name=output_dir, exist_ok=True)
+
                 page_number = 1
                 for i in range(0, len(file_list), grid_size):
                     chunk_paths = file_list[i:i + grid_size]
@@ -293,7 +299,7 @@ class FastPrintApp:
                     grid_canvas = create_grid_canvas(
                         images=chunk_images, grid_size=grid_size, page_type=page, dpi=dpi)
                     final_output = os.path.join(
-                        path, f"gui_grid_page_{page_number}_{page}.png")
+                        output_dir, f"gui_grid_page_{page_number}_{page}.png")
 
                     save_image_for_printing(
                         img=grid_canvas, output_path=final_output, dpi=dpi)
@@ -302,9 +308,12 @@ class FastPrintApp:
                         send_to_system_printer(
                             file_path=final_output, printer_name=printer, page_type=page)
 
+                    grid_canvas.close()
                     for img in chunk_images:
                         img.close()
                     page_number += 1
+
+                gc.collect()
 
             # ---------------------------------------------------------------------
             # PIPELINE FLOW 2: Individual Document or Image processing
@@ -329,6 +338,7 @@ class FastPrintApp:
                         final_output = f"{os.path.splitext(path)[0]}_docx_grid.png"
                         save_image_for_printing(
                             img=canvas, output_path=final_output, dpi=dpi)
+                        canvas.close()
                         if print_now:
                             send_to_system_printer(
                                 file_path=final_output, printer_name=printer, page_type=page)
@@ -341,6 +351,9 @@ class FastPrintApp:
                             if print_now:
                                 send_to_system_printer(
                                     file_path=final_output, printer_name=printer, page_type=page)
+                            pg.close()
+                        
+                        gc.collect()
 
                 # --- Image Processing flow ---
                 else:
@@ -356,21 +369,25 @@ class FastPrintApp:
                                 [img] * grid_size, grid_size=grid_size, page_type=page, dpi=dpi)
                             save_image_for_printing(
                                 img=canvas, output_path=final_output, dpi=dpi)
+                            canvas.close()
                     else:
                         img = resize_image_to_cm(
                             path, width_cm=w_cm, height_cm=h_cm, page_type=page, dpi=dpi)
                         save_image_for_printing(
                             img=img, output_path=final_output, dpi=dpi)
+                        img.close()
 
                     if print_now and final_output and os.path.exists(final_output):
                         send_to_system_printer(
                             file_path=final_output, printer_name=printer, page_type=page)
+                        
+                    gc.collect()
 
             self.root.after(0, self._handle_success)
 
         except Exception as e:
             error_msg = str(e)
-            self.root.after(0, lambda err=error_msg: self._handle_error(err_msg=error_msg))
+            self.root.after(0, lambda: self._handle_error(err_msg=error_msg))
 
     def _handle_success(self):
         self.action_btn.config(state="normal")
