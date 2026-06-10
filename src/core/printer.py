@@ -5,8 +5,9 @@ from typing import List
 from PIL import Image, ImageWin
 
 if sys.platform == "win32":
-    from win32 import win32print
+    import win32print
     import win32ui
+    import win32api
 
 
 def get_available_printers() -> List[str]:
@@ -53,7 +54,7 @@ def _monitor_device_queue(printer_name: str, timeout_seconds: int = 30) -> None:
             if job_count == 0:
                 break
 
-            jobs = win32print.EnumJobs(hprinter, 0, 100, 1)
+            jobs = win32print.EnumJobs(hprinter, 0, -1, 2)
 
             if jobs:
                 status = jobs[0].get("Status", 0)
@@ -154,17 +155,19 @@ def send_to_system_printer(file_path: str, printer_name: str = None, page_type: 
     target_device = printer_name if printer_name else win32print.GetDefaultPrinter()
 
     if file_path.lower().endswith('.pdf'):
-        original_default = win32print.GetDefaultPrinter()
         try:
-            if target_device != original_default:
-                win32print.SetDefaultPrinter(target_device)
-            os.startfile(filepath=file_path, operation="print")
-            time.sleep(1.5)
-            _monitor_device_queue(target_device)
-
-        finally:
-            if target_device != original_default:
-                win32print.SetDefaultPrinter(original_default)
+            win32api.ShellExecute(
+                0,
+                "printto",
+                file_path,
+                f'"{target_device}"',
+                ".",
+                0
+            )
+            time.sleep(2.0)
+        except Exception as e:
+            raise RuntimeError(
+                f"Fallo al enviar el archivo PDF al spooler de impresion: {str(e)}")
 
     else:
         print_image_directly(file_path=file_path,

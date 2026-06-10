@@ -1,6 +1,6 @@
 from typing import List
 
-from docx import Document
+import docx
 from PIL import Image, ImageDraw, ImageFont
 
 from src.core.image import cm_to_pixels
@@ -18,7 +18,7 @@ def extract_text_from_docx(file_path: str) -> str:
         str: A single string containing all the text extracted from the document paragraphs
     """
 
-    doc = Document(file_path)
+    doc = docx.Document(file_path)
     full_text = []
 
     for paragraph in doc.paragraphs:
@@ -53,7 +53,7 @@ def convert_text_to_printable_images(text: str, dpi: int = TARGET_DPI) -> List[I
         font = ImageFont.load_default()
 
     current_page = Image.new("RGB", (page_w, page_h), "white")
-    draw = ImageDraw(current_page)
+    draw = ImageDraw.ImageDraw(current_page)
 
     margin = int(2 * (dpi / 2.54))  # 2 cm margins
     y_cursor = margin
@@ -63,7 +63,7 @@ def convert_text_to_printable_images(text: str, dpi: int = TARGET_DPI) -> List[I
         if y_cursor + line_height > page_h - margin:
             pages.append(current_page)
             current_page = Image.new("RGB", (page_w, page_h), "white")
-            draw = ImageDraw.Draw(current_page)
+            draw = ImageDraw.ImageDraw(current_page)
             y_cursor = margin
 
         draw.text((margin, y_cursor), line, fill="black", font=font)

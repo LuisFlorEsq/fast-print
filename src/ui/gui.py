@@ -11,6 +11,7 @@ from src.core.image import resize_image_to_cm, save_image_for_printing
 from src.core.grid import create_grid_canvas
 from src.core.document import extract_text_from_docx, convert_text_to_printable_images
 from src.core.printer import send_to_system_printer, get_available_printers
+from src.core.doc_strategy import print_document_smart
 
 
 from src.config import (IMAGE_EXTENSIONS, DOC_EXTENSIONS, TARGET_DPI)
@@ -329,31 +330,16 @@ class FastPrintApp:
                             "Para procesar un PDF individual debes activar la impresión directa.")
 
                 elif path.lower().endswith('.docx'):
-                    text = extract_text_from_docx(file_path=path)
-                    pages = convert_text_to_printable_images(text, dpi=dpi)
 
-                    if grid_enabled:
-                        canvas = create_grid_canvas(
-                            images=pages, grid_size=grid_size, page_type=page, dpi=dpi)
-                        final_output = f"{os.path.splitext(path)[0]}_docx_grid.png"
-                        save_image_for_printing(
-                            img=canvas, output_path=final_output, dpi=dpi)
-                        canvas.close()
-                        if print_now:
-                            send_to_system_printer(
-                                file_path=final_output, printer_name=printer, page_type=page)
-
+                    if print_now:
+                        print_document_smart(
+                            file_path=path, printer_name=printer)
                     else:
-                        for idx, pg in enumerate(pages, 1):
-                            final_output = f"{os.path.splitext(path)[0]}_page_{idx}.png"
-                            save_image_for_printing(
-                                img=pg, output_path=final_output, dpi=dpi)
-                            if print_now:
-                                send_to_system_printer(
-                                    file_path=final_output, printer_name=printer, page_type=page)
-                            pg.close()
-                        
-                        gc.collect()
+                        raise ValueError(
+                            "La cuadricula y la previsualizacion no estan disponibles para archivos Word"
+                        )
+
+                    gc.collect()
 
                 # --- Image Processing flow ---
                 else:
@@ -380,7 +366,7 @@ class FastPrintApp:
                     if print_now and final_output and os.path.exists(final_output):
                         send_to_system_printer(
                             file_path=final_output, printer_name=printer, page_type=page)
-                        
+
                     gc.collect()
 
             self.root.after(0, self._handle_success)
