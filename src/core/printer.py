@@ -32,7 +32,7 @@ class PrintManager:
         if not self._initialized:
             self._initialized = True
 
-    def get_available_printers() -> List[str]:
+    def get_available_printers(self) -> List[str]:
         """
         Retrieves a list of all printer names configured on the Windows System
 
@@ -62,7 +62,7 @@ class PrintManager:
             raise FileNotFoundError(
                 F"No se pudo encontrar el archivo en la ruta: {file_path}")
 
-        if sys.platfrom != "win32":
+        if sys.platform != "win32":
             raise RuntimeError(
                 "La impresion directa solo esta optimizada para sistemas Windows")
 
@@ -176,7 +176,7 @@ class PrintManager:
         self._monitor_device_queue(printer_name)
 
 
-    def _monitor_device_queue(printer_name: str, timeout_seconds: int = 30) -> None:
+    def _monitor_device_queue(self, printer_name: str, timeout_seconds: int = 30) -> None:
         """
         Monitors the active printer queue until all current jobs clear or fail
 

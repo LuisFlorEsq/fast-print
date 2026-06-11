@@ -1,8 +1,8 @@
 import os
-import gc
 
 import tkinter as tk
 from PIL import Image
+from contextlib import ExitStack
 
 from tkinter import ttk, filedialog, messagebox
 from threading import Thread
@@ -237,7 +237,7 @@ class FastPrintApp:
             # Instantiate the Singleton manager
             printer_manager = PrintManager()
             printers = printer_manager.get_available_printers()
-            
+
             self.printer_combo['values'] = printers
             if printers:
                 self.printer_combo.set(printers[0])  # Initial value
@@ -274,7 +274,7 @@ class FastPrintApp:
             grid_enabled = self.is_grid_enabled.get()
             grid_size = int(self.grid_combo.get()) if grid_enabled else None
             page = self.page_type.get()
-            
+
             print_manager = PrintManager()
 
             # Execution Papeline
@@ -286,7 +286,7 @@ class FastPrintApp:
             if self.is_directory.get():
                 file_list = [
                     os.path.join(path, f) for f in os.listdir(path)
-                    if f.lower().endswith(IMAGE_EXTENSIONS)
+                    if f.lower().endswith(tuple(IMAGE_EXTENSIONS))
                 ]
 
                 if not file_list:
@@ -299,27 +299,27 @@ class FastPrintApp:
                 page_number = 1
                 for i in range(0, len(file_list), grid_size):
                     chunk_paths = file_list[i:i + grid_size]
-                    chunk_images = [Image.open(path) for path in chunk_paths]
 
-                    grid_canvas = create_grid_canvas(
-                        images=chunk_images, grid_size=grid_size, page_type=page, dpi=dpi)
-                    final_output = os.path.join(
-                        output_dir, f"gui_grid_page_{page_number}_{page}.png")
+                    with ExitStack() as stack:
+                        chunk_images = [stack.enter_context(
+                            Image.open(p)) for p in chunk_paths]
 
-                    save_image_for_printing(
-                        img=grid_canvas, output_path=final_output, dpi=dpi)
+                        with create_grid_canvas(
+                            images=chunk_images, grid_size=grid_size, page_type=page, dpi=dpi
+                        ) as grid_canvas:
 
-                    if print_now:
-                        print_manager.send_to_printer(
-                            file_path=final_output, printer_name=printer, page_type=page)
+                            final_output = os.path.join(
+                                output_dir, f"gui_grid_page_{page_number}_{page}.png"
+                            )
 
-                    grid_canvas.close()
-                    for img in chunk_images:
-                        img.close()
+                            save_image_for_printing(
+                                img=grid_canvas, output_path=final_output, dpi=dpi)
+
+                            if print_now:
+                                print_manager.send_to_printer(
+                                    file_path=final_output, printer_name=printer, page_type=page)
+
                     page_number += 1
-
-                gc.collect()
-
             # ---------------------------------------------------------------------
             # PIPELINE FLOW 2: Individual Document or Image processing
             # ---------------------------------------------------------------------
@@ -343,8 +343,6 @@ class FastPrintApp:
                             "La cuadricula y la previsualizacion no estan disponibles para archivos Word"
                         )
 
-                    gc.collect()
-
                 # --- Image Processing flow ---
                 else:
                     w_cm = float(self.width_ent.get()
@@ -354,24 +352,30 @@ class FastPrintApp:
                     final_output = f"{os.path.splitext(path)[0]}_processed_gui.png"
 
                     if grid_enabled:
-                        with Image.open(path) as img:
-                            canvas = create_grid_canvas(
-                                [img] * grid_size, grid_size=grid_size, page_type=page, dpi=dpi)
-                            save_image_for_printing(
-                                img=canvas, output_path=final_output, dpi=dpi)
-                            canvas.close()
+                        with Image.open(path) as source_img:
+                            with create_grid_canvas(
+                                    [source_img] * grid_size, grid_size=grid_size, page_type=page, dpi=dpi) as canvas:
+
+                                save_image_for_printing(
+                                    img=canvas, output_path=final_output, dpi=dpi)
+
+                                if print_now and os.path.exists(final_output):
+                                    print_manager.send_to_printer(
+                                        file_path=final_output, printer_name=printer, page_type=page
+                                    )
                     else:
-                        img = resize_image_to_cm(
-                            path, width_cm=w_cm, height_cm=h_cm, page_type=page, dpi=dpi)
-                        save_image_for_printing(
-                            img=img, output_path=final_output, dpi=dpi)
-                        img.close()
+                        with resize_image_to_cm(
+                            path, width_cm=w_cm, height_cm=h_cm, page_type=page, dpi=dpi
+                        ) as processed_img:
 
-                    if print_now and final_output and os.path.exists(final_output):
-                        print_manager.send_to_printer(
-                            file_path=final_output, printer_name=printer, page_type=page)
+                            save_image_for_printing(
+                                img=processed_img, output_path=final_output, dpi=dpi
+                            )
 
-                    gc.collect()
+                            if print_now and os.path.exists(final_output):
+                                print_manager.send_to_printer(
+                                    file_path=final_output, printer_name=printer, page_type=page
+                                )
 
             self.root.after(0, self._handle_success)
 
