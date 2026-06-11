@@ -4,7 +4,7 @@ import docx
 from PIL import Image, ImageDraw, ImageFont
 
 from src.core.processing.images.image import cm_to_pixels
-from src.config import TARGET_DPI, PAGE_SIZES
+from src.utils.config import TARGET_DPI, PAGE_SIZES
 
 
 def extract_text_from_docx(file_path: str) -> str:

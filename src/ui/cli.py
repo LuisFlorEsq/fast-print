@@ -8,7 +8,7 @@ from src.core.processing.images.grid import create_grid_canvas
 from src.core.processing.docs.document import extract_text_from_docx, convert_text_to_printable_images
 from src.core.printer import send_to_system_printer, get_available_printers
 
-from src.config import IMAGE_EXTENSIONS, DOC_EXTENSIONS
+from src.utils.config import IMAGE_EXTENSIONS, DOC_EXTENSIONS
 
 
 @click.command()

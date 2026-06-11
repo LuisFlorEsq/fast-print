@@ -3,6 +3,7 @@ import os
 import tkinter as tk
 from PIL import Image
 from contextlib import ExitStack
+from typing import Optional
 
 from tkinter import ttk, filedialog, messagebox
 from threading import Thread
@@ -12,7 +13,10 @@ from src.core.processing.images.grid import create_grid_canvas
 from src.core.processing.docs.doc_strategy import print_document_smart
 
 from src.core.printer import PrintManager
-from src.config import (IMAGE_EXTENSIONS, DOC_EXTENSIONS, TARGET_DPI)
+from src.core.exceptions import translate_exception
+
+from src.utils.config import (IMAGE_EXTENSIONS, DOC_EXTENSIONS, TARGET_DPI)
+from src.utils.logger import logger
 
 AVAILABLE_EXTENSIONS = [
     (
@@ -254,27 +258,33 @@ class FastPrintApp:
                 "Falta informacion", "Por Favor, selecciona un archivo válido antes de continuar")
             return
 
+        # Extract all Tkinter variables safely in the main thread
+        ui_state = {
+            "path": self.selected_path.get(),
+            "is_dir": self.is_directory.get(),
+            "print_now": self.is_print_enabled.get(),
+            "printer": self.target_printer.get(),
+            "grid_enabled": self.is_grid_enabled.get(),
+            "grid_size": int(self.grid_combo.get()) if self.is_grid_enabled.get() else None,
+            "page": self.page_type.get(),
+            "w_cm": float(self.width_ent.get()) if self.width_ent.get() else None,
+            "h_cm": float(self.height_ent.get()) if self.height_ent.get() else None
+        }
+
         self.action_btn.config(state="disabled")
         self.status_lbl.config(
             text="Estado: Procesando archivo en segundo plano... Por favor espera", foreground="blue")
 
-        worker = Thread(target=self._process_core_logic)
+        worker = Thread(target=self._process_core_logic, kwargs=ui_state)
         worker.daemon = True
         worker.start()
 
-    def _process_core_logic(self):
+    def _process_core_logic(self, path: str, is_dir: bool, print_now: bool, printer: Optional[str], grid_enabled: bool, grid_size: int, page: str, w_cm: float, h_cm: float):
         """
         Translates graphical state into precise decoupled core execution routines.
         """
         try:
-            path = self.selected_path.get()
             dpi = TARGET_DPI
-            print_now = self.is_print_enabled.get()
-            printer = self.target_printer.get()
-            grid_enabled = self.is_grid_enabled.get()
-            grid_size = int(self.grid_combo.get()) if grid_enabled else None
-            page = self.page_type.get()
-
             print_manager = PrintManager()
 
             # Execution Papeline
@@ -283,7 +293,7 @@ class FastPrintApp:
             # ---------------------------------------------------------------------
             # PIPELINE FLOW 1: Folder Batch processing
             # ---------------------------------------------------------------------
-            if self.is_directory.get():
+            if is_dir:
                 file_list = [
                     os.path.join(path, f) for f in os.listdir(path)
                     if f.lower().endswith(tuple(IMAGE_EXTENSIONS))
@@ -345,10 +355,6 @@ class FastPrintApp:
 
                 # --- Image Processing flow ---
                 else:
-                    w_cm = float(self.width_ent.get()
-                                 ) if self.width_ent.get() else None
-                    h_cm = float(self.height_ent.get()
-                                 ) if self.height_ent.get() else None
                     final_output = f"{os.path.splitext(path)[0]}_processed_gui.png"
 
                     if grid_enabled:
@@ -380,8 +386,11 @@ class FastPrintApp:
             self.root.after(0, self._handle_success)
 
         except Exception as e:
-            error_msg = str(e)
-            self.root.after(0, lambda: self._handle_error(err_msg=error_msg))
+            
+            logger.exception("Error captured in the background print processing thread.")
+            error_clean_msg = translate_exception(e)
+            
+            self.root.after(0, lambda: self._handle_error(err_msg=error_clean_msg))
 
     def _handle_success(self):
         self.action_btn.config(state="normal")

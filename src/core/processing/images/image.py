@@ -1,5 +1,5 @@
 from PIL import Image
-from src.config import INCH_PER_CM, TARGET_DPI, PAGE_SIZES
+from src.utils.config import INCH_PER_CM, TARGET_DPI, PAGE_SIZES
 
 
 def cm_to_pixels(cm: float, dpi: int = TARGET_DPI) -> int:

@@ -4,6 +4,8 @@ import time
 from typing import List, Optional
 from PIL import Image, ImageWin
 
+from src.core.exceptions import HardwareError, DeviceTimeoutError
+
 if sys.platform == "win32":
     import win32print
     import win32ui
@@ -82,19 +84,30 @@ class PrintManager:
             file_path (str): Absolute path to the PDF file
             printer_name (str): Target printer device name
         """
+        old_printer = None
         try:
+
+            old_printer = win32print.GetDefaultPrinter()
+            win32print.SetDefaultPrinter(printer_name)
+
             win32api.ShellExecute(
                 0,
-                "printto",
+                "print",
                 file_path,
-                f'"{printer_name}"',
+                None,
                 ".",
                 0
             )
-            time.sleep(2.0)
+            time.sleep(3.0)
         except Exception as e:
-            raise RuntimeError(
-                f"Fallo al enviar el archivo PDF al spooler de impresión: {str(e)}")
+            raise HardwareError(f"Fallo crítico al enviar el archivo PDF al spooler: {str(e)}") from e
+
+        finally:
+            if old_printer:
+                try:
+                    win32print.SetDefaultPrinter(old_printer)
+                except Exception:
+                    pass
 
     def _print_image(self, file_path: str, printer_name: str, page_type: str) -> None:
         """
@@ -175,7 +188,6 @@ class PrintManager:
         # Trigger active queue monitoring right after sending data and releasing hardware locks
         self._monitor_device_queue(printer_name)
 
-
     def _monitor_device_queue(self, printer_name: str, timeout_seconds: int = 30) -> None:
         """
         Monitors the active printer queue until all current jobs clear or fail
@@ -191,9 +203,8 @@ class PrintManager:
             while True:
 
                 if time.time() - start_time > timeout_seconds:
-                    raise TimeoutError(
-                        f"Tiempo de espera agotado ({timeout_seconds}s). "
-                        "El trabajo sigue en la cola de Windows. Verifica la conexión de tu impresora."
+                    raise DeviceTimeoutError(
+                        f"Tiempo de espera agotado ({timeout_seconds}s). El trabajo sigue en la cola de Windows."
                     )
 
                 printer_info = win32print.GetPrinter(hprinter, 2)
@@ -207,14 +218,11 @@ class PrintManager:
                 if jobs:
                     status = jobs[0].get("Status", 0)
                     if status & win32print.JOB_STATUS_ERROR:
-                        raise RuntimeError(
-                            "La impresora reportó un error crítico de hardware.")
+                        raise HardwareError("La impresora reportó un error crítico de hardware.")
                     elif status & win32print.JOB_STATUS_PAPEROUT:
-                        raise RuntimeError(
-                            "La impresora se ha quedado sin papel o está atascada.")
+                        raise HardwareError("La impresora se ha quedado sin papel o está atascada.")
                     elif status & win32print.JOB_STATUS_OFFLINE:
-                        raise RuntimeError(
-                            "La impresora cambió a estado fuera de línea.")
+                        raise HardwareError("La impresora cambió a estado fuera de línea.")
 
                 time.sleep(0.5)
         finally:

@@ -2,7 +2,7 @@ from typing import List
 from PIL import Image
 
 from src.core.processing.images.image import cm_to_pixels
-from src.config import PAGE_SIZES, TARGET_DPI
+from src.utils.config import PAGE_SIZES, TARGET_DPI
 
 
 def create_grid_canvas(images: List[Image.Image], grid_size: int = 4, page_type: str = "letter", dpi: int = TARGET_DPI) -> Image.Image:

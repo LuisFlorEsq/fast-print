@@ -78,8 +78,9 @@ hiddenimports = (
         "_ctypes",
         "ctypes",
         "ctypes.util",
-        "docx",   # Forza la inclusión de python-docx
-        "pypdf",  # Forza la inclusión de pypdf binaries
+        "docx", 
+        "pypdf",
+        "win32timezone"
     ]
 )
 
@@ -106,9 +107,12 @@ a = Analysis(
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],
-    excludes=[],
+    excludes=[
+        'matplotlib', 'numpy', 'pandas', 'scipy', 
+        'PyQt5', 'PyQt6', 'PySide2', 'PySide6', 
+        'IPython', 'jupyter', 'notebook', 'wx'    ],
     noarchive=False,
-    optimize=0,
+    optimize=2,
 )
 
 # -----------------------------------------------------------------------------
