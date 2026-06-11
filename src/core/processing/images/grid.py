@@ -1,7 +1,7 @@
 from typing import List
 from PIL import Image
 
-from src.core.image import cm_to_pixels
+from src.core.processing.images.image import cm_to_pixels
 from src.config import PAGE_SIZES, TARGET_DPI
 
 

@@ -2,10 +2,10 @@ import os
 import click
 from PIL import Image
 
-from src.core.image import resize_image_to_cm, save_image_for_printing
-from src.core.grid import create_grid_canvas
+from src.core.processing.images.image import resize_image_to_cm, save_image_for_printing
+from src.core.processing.images.grid import create_grid_canvas
 
-from src.core.document import extract_text_from_docx, convert_text_to_printable_images
+from src.core.processing.docs.document import extract_text_from_docx, convert_text_to_printable_images
 from src.core.printer import send_to_system_printer, get_available_printers
 
 from src.config import IMAGE_EXTENSIONS, DOC_EXTENSIONS

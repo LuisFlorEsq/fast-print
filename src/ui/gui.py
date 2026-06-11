@@ -7,13 +7,11 @@ from PIL import Image
 from tkinter import ttk, filedialog, messagebox
 from threading import Thread
 
-from src.core.image import resize_image_to_cm, save_image_for_printing
-from src.core.grid import create_grid_canvas
-from src.core.document import extract_text_from_docx, convert_text_to_printable_images
-from src.core.printer import send_to_system_printer, get_available_printers
-from src.core.doc_strategy import print_document_smart
+from src.core.processing.images.image import resize_image_to_cm, save_image_for_printing
+from src.core.processing.images.grid import create_grid_canvas
+from src.core.processing.docs.doc_strategy import print_document_smart
 
-
+from src.core.printer import PrintManager
 from src.config import (IMAGE_EXTENSIONS, DOC_EXTENSIONS, TARGET_DPI)
 
 AVAILABLE_EXTENSIONS = [
@@ -232,10 +230,14 @@ class FastPrintApp:
 
     def _load_printers(self):
         """
-        Asynchronously loads target devices to prevent window freezing
+        Asynchronously loads target devices to prevent window freezing.
+        Utilizes the Singleton manager to fetch hardware devices safely.
         """
         try:
-            printers = get_available_printers()
+            # Instantiate the Singleton manager
+            printer_manager = PrintManager()
+            printers = printer_manager.get_available_printers()
+            
             self.printer_combo['values'] = printers
             if printers:
                 self.printer_combo.set(printers[0])  # Initial value
@@ -272,6 +274,8 @@ class FastPrintApp:
             grid_enabled = self.is_grid_enabled.get()
             grid_size = int(self.grid_combo.get()) if grid_enabled else None
             page = self.page_type.get()
+            
+            print_manager = PrintManager()
 
             # Execution Papeline
             final_output = None
@@ -306,7 +310,7 @@ class FastPrintApp:
                         img=grid_canvas, output_path=final_output, dpi=dpi)
 
                     if print_now:
-                        send_to_system_printer(
+                        print_manager.send_to_printer(
                             file_path=final_output, printer_name=printer, page_type=page)
 
                     grid_canvas.close()
@@ -323,7 +327,7 @@ class FastPrintApp:
                 # --- Document Flow (pdf, docx) ---
                 if path.lower().endswith('.pdf'):
                     if print_now:
-                        send_to_system_printer(
+                        print_manager.send_to_printer(
                             file_path=path, printer_name=printer, page_type=page)
                     else:
                         raise ValueError(
@@ -364,7 +368,7 @@ class FastPrintApp:
                         img.close()
 
                     if print_now and final_output and os.path.exists(final_output):
-                        send_to_system_printer(
+                        print_manager.send_to_printer(
                             file_path=final_output, printer_name=printer, page_type=page)
 
                     gc.collect()
