@@ -33,7 +33,13 @@ def resize_image_to_cm(input_path: str, width_cm: float = None, height_cm: float
     """
 
     # Create the canvas to paste the resized image
-    page_dims_cm = PAGE_SIZES.get(page_type.lower(), PAGE_SIZES[page_type])
+    
+    page_key = page_type.lower()
+    
+    if page_key not in PAGE_SIZES:
+        raise ValueError(f"Unsupported page type: {page_type}")
+    
+    page_dims_cm = PAGE_SIZES[page_key]
     page_w = cm_to_pixels(page_dims_cm[0], dpi)
     page_h = cm_to_pixels(page_dims_cm[1], dpi)
 
