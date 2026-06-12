@@ -1,7 +1,7 @@
 import os
 
 import tkinter as tk
-from PIL import Image
+from PIL import Image, ImageTk
 from contextlib import ExitStack
 from typing import Optional
 
@@ -158,6 +158,25 @@ class FastPrintApp:
             "Segoe UI", 9, "italic"), foreground="gray")
         self.status_lbl.pack(anchor=tk.W, pady=(5, 0))
 
+        # ---------------------------------------------------------------------
+        # SECTION 5: Preview frame component
+        # ---------------------------------------------------------------------
+
+        self.preview_frame = ttk.LabelFrame(
+            self.root, text=" Vista Previa del Contenido ")
+        self.preview_frame.place(x=310, y=20, width=190, height=180)
+
+        self.preview_lbl = ttk.Label(
+            self.preview_frame,
+            text="Ningún archivo seleccionado",
+            justify="center",
+            anchor="center"
+        )
+        self.preview_lbl.pack(expand=True, fill="both", padx=5, pady=5)
+
+        # Call the tracking initializer
+        self._initialize_preview_and_recovery()
+
     def _handle_browse_file(self):
         """
         Handles individual file browsing selection
@@ -168,6 +187,7 @@ class FastPrintApp:
             self.is_directory.set(False)
             self._adapt_ux_fields(
                 is_folder=False, is_doc=file_path.lower().endswith(('.pdf', '.docx')))
+            self._update_thumbnail_preview(file_path=file_path)
 
     def _handle_browse_directory(self):
         """
@@ -257,6 +277,8 @@ class FastPrintApp:
             messagebox.showwarning(
                 "Falta informacion", "Por Favor, selecciona un archivo válido antes de continuar")
             return
+        
+        self._freeze_ui_context()
 
         # Extract all Tkinter variables safely in the main thread
         ui_state = {
@@ -383,14 +405,15 @@ class FastPrintApp:
                                     file_path=final_output, printer_name=printer, page_type=page
                                 )
 
-            self.root.after(0, self._handle_success)
+            self.root.after(0, lambda: self._recover_ui_context(is_success=True))
 
         except Exception as e:
-            
-            logger.exception("Error captured in the background print processing thread.")
+
+            logger.exception(
+                "Error captured in the background print processing thread.")
             error_clean_msg = translate_exception(e)
-            
-            self.root.after(0, lambda: self._handle_error(err_msg=error_clean_msg))
+
+            self.root.after(0, lambda: self._recover_ui_context(is_success=False, standard_message=error_clean_msg))
 
     def _handle_success(self):
         self.action_btn.config(state="normal")
@@ -405,6 +428,119 @@ class FastPrintApp:
             text="Estado: Error en la cola de impresión.", foreground="red")
         messagebox.showerror("Error de Procesamiento",
                              f"Ocurrió un fallo: {err_msg}")
+
+    def _initialize_preview_and_recovery(self):
+        """
+        Initializes baseline references for the visual preview cache and gathers all interactive widgets for state toggling
+        """
+        self.cached_thumbnail_ref = None
+
+        self.interactive_widgets = [
+            self.action_btn,
+            self.grid_combo,
+            self.width_ent,
+            self.height_ent,
+            self.grid_chk,
+        ]
+
+    def _update_thumbnail_preview(self, file_path: str):
+        """
+        Generates a fast low-overhead visual thumbnail preview of the selected image
+        If the file is a document or directory, it displays a friendly descriptive label
+
+        Args:
+            file_path (str): Absolute file path to analyze
+        """
+
+        max_width = 180
+        max_height = 140
+
+        if not file_path or not os.path.exists(file_path):
+            self.preview_lbl.config(
+                image="", text="Ningun archivo seleccionado")
+            self.cached_thumbnail_ref = None
+            return
+
+        if os.path.isdir(file_path):
+            self.preview_lbl.config(
+                image="", text="[Carpeta de Imagenes]\nListo para lote")
+            self.cached_thumbnail_ref = None
+            return
+
+        file_extension = os.path.splitext(file_path)[1].lower()
+
+        if file_extension in DOC_EXTENSIONS or file_extension == ".pdf":
+            self.preview_lbl.config(
+                image="", text=f"[ Documento {file_extension.upper()} ]\nListo para procesar")
+            self.cached_thumbnail_ref = None
+            return
+
+        if file_extension in IMAGE_EXTENSIONS:
+            try:
+                with Image.open(file_path) as img:
+                    img.thumbnail((max_width, max_height),
+                                  Image.Resampling.BILINEAR)
+
+                    self.cached_thumbnail_ref = ImageTk.PhotoImage(img)
+
+                    # Update the GUI component layout
+                    self.preview_lbl.config(
+                        image=self.cached_thumbnail_ref, text="")
+            except Exception:
+                self.preview_lbl.config(
+                    image="", text="Error al cargar\nvista previa")
+                self.cached_thumbnail_ref = None
+
+    def _freeze_ui_context(self):
+        """
+        Locks all interactive input fields, selectors and triggers
+        """
+
+        for widget in self.interactive_widgets:
+            try:
+                widget.config(state="disabled")
+            except Exception:
+                pass
+
+        self.status_lbl.config(
+            text="Estado: Procesando hardware... Por favor espere.",
+            foreground="blue"
+        )
+
+    def _recover_ui_context(self, is_success: bool, standard_message: str = ""):
+        """
+        Restores full user control to input fields and clears background processing states
+
+        Args:
+            is_success (bool): State flag tracking the background thread outcome
+            standard_message (str, optional): Customized string token to dump into the GUI message boxs. Defaults to "".
+        """
+
+        for widget in self.interactive_widgets:
+            try:
+                widget.config(state="normal")
+
+            except Exception:
+                pass
+
+        if is_success:
+            self.status_lbl.config(
+                text="Estado: ¡Operación completada con éxito en el hardware!",
+                foreground="green"
+            )
+            messagebox.showinfo(
+                "Éxito",
+                "El documento ha sido procesado e impreso de forma segura."
+            )
+        else:
+            self.status_lbl.config(
+                text="Estado: Error en la cola de impresión.",
+                foreground="red"
+            )
+            messagebox.showerror(
+                "Error de Procesamiento",
+                standard_message
+            )
 
 
 if __name__ == "__main__":
