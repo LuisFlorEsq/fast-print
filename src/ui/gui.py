@@ -55,6 +55,9 @@ class FastPrintApp:
         self.is_grid_enabled = tk.BooleanVar(value=False)
         self.is_print_enabled = tk.BooleanVar(value=True)
 
+        # References for visual preview tracking
+        self.modal_preview_img_ref = None
+
         self._build_ui()
         self._load_printers()
 
@@ -151,31 +154,12 @@ class FastPrintApp:
         # ---------------------------------------------------------------------
 
         self.action_btn = ttk.Button(
-            main_frame, text="Iniciar Procesamiento Rapido", command=self._execute_thread)
+            main_frame, text="Generar vista previa", command=self._execute_thread)
         self.action_btn.pack(fill=tk.X, ipady=5)
 
         self.status_lbl = ttk.Label(main_frame, text="Estado: Listo", font=(
             "Segoe UI", 9, "italic"), foreground="gray")
         self.status_lbl.pack(anchor=tk.W, pady=(5, 0))
-
-        # ---------------------------------------------------------------------
-        # SECTION 5: Preview frame component
-        # ---------------------------------------------------------------------
-
-        self.preview_frame = ttk.LabelFrame(
-            self.root, text=" Vista Previa del Contenido ")
-        self.preview_frame.place(x=310, y=20, width=190, height=180)
-
-        self.preview_lbl = ttk.Label(
-            self.preview_frame,
-            text="Ningún archivo seleccionado",
-            justify="center",
-            anchor="center"
-        )
-        self.preview_lbl.pack(expand=True, fill="both", padx=5, pady=5)
-
-        # Call the tracking initializer
-        self._initialize_preview_and_recovery()
 
     def _handle_browse_file(self):
         """
@@ -187,7 +171,6 @@ class FastPrintApp:
             self.is_directory.set(False)
             self._adapt_ux_fields(
                 is_folder=False, is_doc=file_path.lower().endswith(('.pdf', '.docx')))
-            self._update_thumbnail_preview(file_path=file_path)
 
     def _handle_browse_directory(self):
         """
@@ -261,8 +244,8 @@ class FastPrintApp:
             # Instantiate the Singleton manager
             printer_manager = PrintManager()
             printers = printer_manager.get_available_printers()
-
             self.printer_combo['values'] = printers
+
             if printers:
                 self.printer_combo.set(printers[0])  # Initial value
         except Exception:
@@ -277,8 +260,10 @@ class FastPrintApp:
             messagebox.showwarning(
                 "Falta informacion", "Por Favor, selecciona un archivo válido antes de continuar")
             return
-        
-        self._freeze_ui_context()
+
+        self.action_btn.config(state="disabled")
+        self.status_lbl.config(
+            text="Estado: Procesando archivo en segundo plano... Por favor espera", foreground="blue")
 
         # Extract all Tkinter variables safely in the main thread
         ui_state = {
@@ -293,10 +278,6 @@ class FastPrintApp:
             "h_cm": float(self.height_ent.get()) if self.height_ent.get() else None
         }
 
-        self.action_btn.config(state="disabled")
-        self.status_lbl.config(
-            text="Estado: Procesando archivo en segundo plano... Por favor espera", foreground="blue")
-
         worker = Thread(target=self._process_core_logic, kwargs=ui_state)
         worker.daemon = True
         worker.start()
@@ -307,9 +288,6 @@ class FastPrintApp:
         """
         try:
             dpi = TARGET_DPI
-            print_manager = PrintManager()
-
-            # Execution Papeline
             final_output = None
 
             # ---------------------------------------------------------------------
@@ -347,36 +325,19 @@ class FastPrintApp:
                             save_image_for_printing(
                                 img=grid_canvas, output_path=final_output, dpi=dpi)
 
-                            if print_now:
-                                print_manager.send_to_printer(
-                                    file_path=final_output, printer_name=printer, page_type=page)
-
                     page_number += 1
             # ---------------------------------------------------------------------
             # PIPELINE FLOW 2: Individual Document or Image processing
             # ---------------------------------------------------------------------
             else:
                 # --- Document Flow (pdf, docx) ---
-                if path.lower().endswith('.pdf'):
-                    if print_now:
-                        print_manager.send_to_printer(
-                            file_path=path, printer_name=printer, page_type=page)
-                    else:
-                        raise ValueError(
-                            "Para procesar un PDF individual debes activar la impresión directa.")
+                if path.lower().endswith(('.pdf', '.docx')):
 
-                elif path.lower().endswith('.docx'):
+                    final_output = path
 
-                    if print_now:
-                        print_document_smart(
-                            file_path=path, printer_name=printer)
-                    else:
-                        raise ValueError(
-                            "La cuadricula y la previsualizacion no estan disponibles para archivos Word"
-                        )
-
-                # --- Image Processing flow ---
+                # --- Standard Image processing ---
                 else:
+
                     final_output = f"{os.path.splitext(path)[0]}_processed_gui.png"
 
                     if grid_enabled:
@@ -387,10 +348,6 @@ class FastPrintApp:
                                 save_image_for_printing(
                                     img=canvas, output_path=final_output, dpi=dpi)
 
-                                if print_now and os.path.exists(final_output):
-                                    print_manager.send_to_printer(
-                                        file_path=final_output, printer_name=printer, page_type=page
-                                    )
                     else:
                         with resize_image_to_cm(
                             path, width_cm=w_cm, height_cm=h_cm, page_type=page, dpi=dpi
@@ -400,12 +357,8 @@ class FastPrintApp:
                                 img=processed_img, output_path=final_output, dpi=dpi
                             )
 
-                            if print_now and os.path.exists(final_output):
-                                print_manager.send_to_printer(
-                                    file_path=final_output, printer_name=printer, page_type=page
-                                )
-
-            self.root.after(0, lambda: self._recover_ui_context(is_success=True))
+            self.root.after(0, lambda: self._open_preview_modal(
+                output_path=final_output, printer=printer, page=page))
 
         except Exception as e:
 
@@ -413,7 +366,124 @@ class FastPrintApp:
                 "Error captured in the background print processing thread.")
             error_clean_msg = translate_exception(e)
 
-            self.root.after(0, lambda: self._recover_ui_context(is_success=False, standard_message=error_clean_msg))
+            self.root.after(0, lambda: self._handle_error(
+                err_msg=error_clean_msg))
+
+    def _open_preview_modal(self, output_path: str, printer: str, page: str):
+        """
+        Creates a modern separate popup window for verifying layout components before printing
+
+        Args:
+            output_path (str): Path of the target Images/Documents
+            printer (str): Target device
+            page (str): Page type (Letter, A4)
+        """
+
+        self.action_btn.config(state="normal")
+        self.status_lbl.config(
+            text="Estado: Vista previa lista", foreground="green")
+
+        # Window configuration
+        preview_win = tk.Toplevel(self.root)
+        preview_win.title("Vista previa de impresión")
+        preview_win.geometry("450x530")
+        preview_win.resizable(False, False)
+
+        preview_win.grab_set()  # Blocks interaction with the background window
+
+        container = ttk.Frame(preview_win, padding=15)
+        container.pack(fill=tk.BOTH, expand=True)
+
+        ttk.Label(
+            container,
+            text="Confirma el diseño final antes de imprimir:",
+            font=("Segoe UI", 10, "bold")
+        ).pack(pady=(0, 10))
+
+        # Core graphic vieweing frame
+        viewer_lf = ttk.Label(
+            container, text="Renderizado de pagina", padding=5)
+        viewer_lf.pack(fill=tk.BOTH, expand=True)
+
+        display_lbl = ttk.Label(viewer_lf, anchor="center", justify="center")
+        display_lbl.pack(fill=tk.BOTH, expand=True)
+
+        file_extension = os.path.splitext(output_path)[1].lower()
+
+        if file_extension in [".pdf", ".docx"]:
+            display_lbl.config(text=f"Vista previa no disponible\npara archivos nativos {file_extension.upper()}.\n\n"
+                               f"El archivo está listo para ser enviado\nal hardware de forma segura.")
+            self.modal_preview_img_ref = None
+
+        else:
+            try:
+                with Image.open(output_path) as img:
+                    preview_copy = img.copy()
+                    preview_copy.thumbnail(
+                        (360, 360), Image.Resampling.BILINEAR)
+                    self.modal_preview_img_ref = ImageTk.PhotoImage(
+                        preview_copy)
+                    display_lbl.config(image=self.modal_preview_img_ref)
+
+            except Exception as e:
+                display_lbl.config(
+                    text=f"Error al cargar la visualizacion detallada:\n{str(e)}")
+
+        # Action buttons Layout
+        actions_frame = ttk.Frame(container)
+        actions_frame.pack(fill=tk.X, pady=(15, 0))
+
+        cancel_btn = ttk.Button(
+            actions_frame, text="Cancelar", command=preview_win.destroy)
+        cancel_btn.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=(0, 5))
+
+        print_btn = ttk.Button(actions_frame, text="Imprimir ahora", command=lambda: self._send_to_hardware(
+            output_path=output_path, printer=printer, page=page, window=preview_win))
+        print_btn.pack(side=tk.RIGHT, fill=tk.X, expand=True, padx=(5, 0))
+
+    def _send_to_hardware(self, output_path: str, printer: str, page: str, window: tk.Toplevel):
+        """
+        Asynchronously dispatches the confirmed template target out to the physical spooler queue
+
+        Args:
+            output_path (str): Path to validated file template
+            printer (str): Target device
+            page (str): Page type to use
+            window (tk.Toplevel): Root component, window in this case
+        """
+
+        window.destroy()
+        self.status_lbl.config(
+            text="Estado: Comunicandose con el dispositivo de impresion...", foreground="blue")
+
+        def print_worker():
+            try:
+                print_manager = PrintManager()
+                file_extension = os.path.splitext(output_path)[1].lower()
+
+                if file_extension == ".pdf":
+                    print_manager.send_to_printer(
+                        file_path=output_path, printer_name=printer, page_type=page)
+                elif file_extension == ".docx":
+                    print_document_smart(
+                        file_path=output_path, printer_name=printer)
+                else:
+                    if os.path.exists(output_path):
+                        print_manager.send_to_printer(
+                            file_path=output_path, printer_name=printer, page_type=page)
+
+                self.root.after(0, self._handle_success)
+
+            except Exception as e:
+                logger.exception(
+                    "Critical fail occurred during print spooler transmission.")
+                error_clean_msg = translate_exception(e)
+                self.root.after(0, lambda: self._handle_error(
+                    err_msg=error_clean_msg))
+
+        hardware_thread = Thread(target=print_worker)
+        hardware_thread.daemon = True
+        hardware_thread.start()
 
     def _handle_success(self):
         self.action_btn.config(state="normal")
@@ -428,119 +498,6 @@ class FastPrintApp:
             text="Estado: Error en la cola de impresión.", foreground="red")
         messagebox.showerror("Error de Procesamiento",
                              f"Ocurrió un fallo: {err_msg}")
-
-    def _initialize_preview_and_recovery(self):
-        """
-        Initializes baseline references for the visual preview cache and gathers all interactive widgets for state toggling
-        """
-        self.cached_thumbnail_ref = None
-
-        self.interactive_widgets = [
-            self.action_btn,
-            self.grid_combo,
-            self.width_ent,
-            self.height_ent,
-            self.grid_chk,
-        ]
-
-    def _update_thumbnail_preview(self, file_path: str):
-        """
-        Generates a fast low-overhead visual thumbnail preview of the selected image
-        If the file is a document or directory, it displays a friendly descriptive label
-
-        Args:
-            file_path (str): Absolute file path to analyze
-        """
-
-        max_width = 180
-        max_height = 140
-
-        if not file_path or not os.path.exists(file_path):
-            self.preview_lbl.config(
-                image="", text="Ningun archivo seleccionado")
-            self.cached_thumbnail_ref = None
-            return
-
-        if os.path.isdir(file_path):
-            self.preview_lbl.config(
-                image="", text="[Carpeta de Imagenes]\nListo para lote")
-            self.cached_thumbnail_ref = None
-            return
-
-        file_extension = os.path.splitext(file_path)[1].lower()
-
-        if file_extension in DOC_EXTENSIONS or file_extension == ".pdf":
-            self.preview_lbl.config(
-                image="", text=f"[ Documento {file_extension.upper()} ]\nListo para procesar")
-            self.cached_thumbnail_ref = None
-            return
-
-        if file_extension in IMAGE_EXTENSIONS:
-            try:
-                with Image.open(file_path) as img:
-                    img.thumbnail((max_width, max_height),
-                                  Image.Resampling.BILINEAR)
-
-                    self.cached_thumbnail_ref = ImageTk.PhotoImage(img)
-
-                    # Update the GUI component layout
-                    self.preview_lbl.config(
-                        image=self.cached_thumbnail_ref, text="")
-            except Exception:
-                self.preview_lbl.config(
-                    image="", text="Error al cargar\nvista previa")
-                self.cached_thumbnail_ref = None
-
-    def _freeze_ui_context(self):
-        """
-        Locks all interactive input fields, selectors and triggers
-        """
-
-        for widget in self.interactive_widgets:
-            try:
-                widget.config(state="disabled")
-            except Exception:
-                pass
-
-        self.status_lbl.config(
-            text="Estado: Procesando hardware... Por favor espere.",
-            foreground="blue"
-        )
-
-    def _recover_ui_context(self, is_success: bool, standard_message: str = ""):
-        """
-        Restores full user control to input fields and clears background processing states
-
-        Args:
-            is_success (bool): State flag tracking the background thread outcome
-            standard_message (str, optional): Customized string token to dump into the GUI message boxs. Defaults to "".
-        """
-
-        for widget in self.interactive_widgets:
-            try:
-                widget.config(state="normal")
-
-            except Exception:
-                pass
-
-        if is_success:
-            self.status_lbl.config(
-                text="Estado: ¡Operación completada con éxito en el hardware!",
-                foreground="green"
-            )
-            messagebox.showinfo(
-                "Éxito",
-                "El documento ha sido procesado e impreso de forma segura."
-            )
-        else:
-            self.status_lbl.config(
-                text="Estado: Error en la cola de impresión.",
-                foreground="red"
-            )
-            messagebox.showerror(
-                "Error de Procesamiento",
-                standard_message
-            )
 
 
 if __name__ == "__main__":
