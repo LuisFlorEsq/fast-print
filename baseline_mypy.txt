@@ -1,6 +1,0 @@
-src\utils\logger.py: error: Source file found twice under different module names: "logger" and "src.utils.logger"
-src\utils\logger.py: note: See https://mypy.readthedocs.io/en/stable/running_mypy.html#mapping-file-paths-to-modules for more info
-src\utils\logger.py: note: Common resolutions include:
-src\utils\logger.py: note:     a) adding `__init__.py` somewhere,
-src\utils\logger.py: note:     b) using `--explicit-package-bases` or adjusting `MYPYPATH`
-Found 1 error in 1 file (errors prevented further checking)

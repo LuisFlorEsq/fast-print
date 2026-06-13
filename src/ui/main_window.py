@@ -8,9 +8,9 @@ from typing import Optional
 from tkinter import ttk, filedialog, messagebox
 from threading import Thread
 
-from src.core.processing.images.image import resize_image_to_cm, save_image_for_printing
-from src.core.processing.images.grid import create_grid_canvas
-from src.core.processing.docs.doc_strategy import print_document_smart
+from src.processing.images.image import resize_image_to_cm, save_image_for_printing
+from src.processing.images.grid import create_grid_canvas
+from src.processing.docs.doc_strategy import print_document_smart
 
 from src.core.printer import PrintManager
 from src.core.exceptions import translate_exception
@@ -501,6 +501,7 @@ class FastPrintApp:
 
 
 if __name__ == "__main__":
+    logger.info("FastPrint application starting")
     root = tk.Tk()
     app = FastPrintApp(root)
     root.mainloop()

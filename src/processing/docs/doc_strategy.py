@@ -79,7 +79,8 @@ class WordComStrategy(DocumentPrintStrategy):
 
             logger.exception("COM automation failed")
             raise RuntimeError(
-                "Fallo al procesar el documento con Microsoft Word. Es posible que el archivo esté corrupto o bloqueado."
+                "Fallo al procesar el documento con Microsoft Word."
+                "Es posible que el archivo esté corrupto o bloqueado."
             )
             
         finally:

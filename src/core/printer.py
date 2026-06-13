@@ -5,6 +5,7 @@ from typing import List, Optional
 from PIL import Image, ImageWin
 
 from src.core.exceptions import HardwareError, DeviceTimeoutError
+from src.utils.logger import logger
 
 if sys.platform == "win32":
     import win32print
@@ -69,6 +70,8 @@ class PrintManager:
                 "La impresion directa solo esta optimizada para sistemas Windows")
 
         target_device = printer_name if printer_name else win32print.GetDefaultPrinter()
+        
+        logger.info(f"Sending file to printer: file={file_path}, printer={target_device}")
 
         if file_path.lower().endswith('.pdf'):
             self._print_pdf(file_path, target_device)
@@ -107,7 +110,8 @@ class PrintManager:
                 try:
                     win32print.SetDefaultPrinter(old_printer)
                 except Exception:
-                    pass
+                    logger.exception("Failed to restore default printer")
+                    
 
     def _print_image(self, file_path: str, printer_name: str, page_type: str) -> None:
         """
@@ -136,7 +140,7 @@ class PrintManager:
                 devmode.PaperSize = paper_code
                 hdc.ResetDC(devmode)
             except Exception:
-                pass
+                logger.warning("Could not configure printer paper size")
 
             doc_name = f"FastPrint_{os.path.basename(file_path)}"
             hdc.StartDoc(doc_name)
@@ -180,7 +184,7 @@ class PrintManager:
                 try:
                     hdc.DeleteDC()
                 except Exception:
-                    pass
+                    logger.exception("Failed to delete printer device context")
 
             if hprinter:
                 win32print.ClosePrinter(hprinter)
@@ -196,6 +200,8 @@ class PrintManager:
             printer_name (str): Target printer to monitor
             timeout_seconds (int): Maximum time to wait for the queue to clear. Defaults to 30
         """
+        logger.info(f"Monitoring print queue for printer {printer_name}")
+        
         hprinter = win32print.OpenPrinter(printer_name)
         start_time = time.time()
 
@@ -211,6 +217,7 @@ class PrintManager:
                 job_count = printer_info.get("cJobs", 0)
 
                 if job_count == 0:
+                    logger.info("Print queue cleared successfully")
                     break
 
                 jobs = win32print.EnumJobs(hprinter, 0, -1, 2)

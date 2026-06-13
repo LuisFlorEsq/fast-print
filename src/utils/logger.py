@@ -39,8 +39,9 @@ def setup_app_logger() -> logging.Logger:
     )
 
     handler.setFormatter(formatter)
-    handler.setLevel(logging.INFO)
     logger.addHandler(handler)
+    
+    return logger
 
 
 # Global instance ready for import across the application
