@@ -1,4 +1,5 @@
 import logging
+from logging.handlers import RotatingFileHandler
 from pathlib import Path
 
 
@@ -9,25 +10,37 @@ def setup_app_logger() -> logging.Logger:
     Returns:
         logging.Logger: Configured logger instance.
     """
-    log_dir = Path("logs")
+
+    logger = logging.getLogger("FastPrint")
+    logger.setLevel(logging.INFO)
+
+    if logger.handlers:
+        return logger
+
+    base_dir = Path.cwd()
+    log_dir = base_dir / "logs"
     log_dir.mkdir(parents=True, exist_ok=True)
 
-    log_file = log_dir / "fastprint_error.log"
-    logger = logging.getLogger("FastPrint")
-    logger.setLevel(logging.ERROR)
+    log_file = log_dir / "fastprint.log"
 
-    # Prevent duplicating handlers if the module is reloaded dynamically
-    if not logger.handlers:
-        file_handler = logging.FileHandler(log_file, encoding="utf-8")
+    handler = RotatingFileHandler(
+        log_file,
+        maxBytes=5 * 1024 * 1024,  # 5 MB
+        backupCount=3,
+        encoding="utf-8"
+    )
 
-        formatter = logging.Formatter(
-            "[%(asctime)s] %(levelname)s [%(name)s] [%(filename)s:%(lineno)d] - %(message)s",
-            datefmt="%Y-%m-%d %H:%M:%S"
-        )
-        file_handler.setFormatter(formatter)
-        logger.addHandler(file_handler)
+    formatter = logging.Formatter(
+        "[%(asctime)s] %(levelname)s "
+        "[%(name)s] "
+        "[%(filename)s:%(lineno)d] "
+        "- %(message)s",
+        datefmt="%Y-%m-%d %H:%M:%S"
+    )
 
-    return logger
+    handler.setFormatter(formatter)
+    handler.setLevel(logging.INFO)
+    logger.addHandler(handler)
 
 
 # Global instance ready for import across the application

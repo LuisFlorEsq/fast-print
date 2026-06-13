@@ -1,0 +1,693 @@
+E501 Line too long (93 > 88)
+  --> src\core\exceptions.py:23:89
+   |
+21 | def translate_exception(exc: Exception) -> str:
+22 |     """
+23 |     Analyzes a native system exception and tries to translate it into a user-readable message
+   |                                                                                         ^^^^^
+24 |
+25 |     Args:
+   |
+
+E501 Line too long (92 > 88)
+  --> src\core\exceptions.py:40:89
+   |
+38 |             return (
+39 |                 "Error de Hardware (31): El dispositivo seleccionado no responde o "
+40 |                 "el visor predeterminado de Windows no soporta la redirección de impresión."
+   |                                                                                         ^^^^
+41 |             )
+42 |         if "1155" in msg:
+   |
+
+E501 Line too long (121 > 88)
+  --> src\core\exceptions.py:48:89
+   |
+46 |             )
+47 |         if "access is denied" in msg or "error 5" in msg:
+48 |             return "Error de Permisos (5): Windows denegó el acceso a la impresora. Intenta ejecutar como Administrador."
+   |                                                                                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+49 |
+50 |         return f"Error en el subsistema de impresión de Windows: {str(exc)}"
+   |
+
+E501 Line too long (113 > 88)
+  --> src\core\exceptions.py:53:89
+   |
+52 |     if isinstance(exc, FileNotFoundError):
+53 |         return f"Archivo no encontrado: El archivo o ruta especificada no existe en el disco duro.\n({str(exc)})"
+   |                                                                                         ^^^^^^^^^^^^^^^^^^^^^^^^^
+54 |
+55 |     if isinstance(exc, ValueError):
+   |
+
+I001 [*] Import block is un-sorted or un-formatted
+ --> src\core\printer.py:1:1
+  |
+1 | / import os
+2 | | import sys
+3 | | import time
+4 | | from typing import List, Optional
+5 | | from PIL import Image, ImageWin
+6 | |
+7 | | from src.core.exceptions import HardwareError, DeviceTimeoutError
+  | |_________________________________________________________________^
+8 |
+9 |   if sys.platform == "win32":
+  |
+help: Organize imports
+
+I001 [*] Import block is un-sorted or un-formatted
+  --> src\core\printer.py:10:5
+   |
+ 9 |   if sys.platform == "win32":
+10 | /     import win32print
+11 | |     import win32ui
+12 | |     import win32api
+   | |___________________^
+   |
+help: Organize imports
+
+E501 Line too long (117 > 88)
+  --> src\core\printer.py:54:89
+   |
+52 |         return [printer[2] for printer in printer_tuples]
+53 |
+54 |     def send_to_printer(self, file_path: str, printer_name: Optional[str] = None, page_type: str = "letter") -> None:
+   |                                                                                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+55 |         """
+56 |         Dispatches a file to the specified Windows print spooler safely
+   |
+
+E501 Line too long (110 > 88)
+  --> src\core\printer.py:60:89
+   |
+58 |         Args:
+59 |             file_path (str): The absolute path to the file to be printed
+60 |             printer_name (Optional[str], optional): The name of the specific printer device. Defaults to None.
+   |                                                                                         ^^^^^^^^^^^^^^^^^^^^^^
+61 |             page_type (str, optional): The page size to format. Defaults to "letter".
+62 |         """
+   |
+
+E501 Line too long (102 > 88)
+   --> src\core\printer.py:103:89
+    |
+101 |             time.sleep(3.0)
+102 |         except Exception as e:
+103 |             raise HardwareError(f"Fallo crítico al enviar el archivo PDF al spooler: {str(e)}") from e
+    |                                                                                         ^^^^^^^^^^^^^^
+104 |
+105 |         finally:
+    |
+
+E501 Line too long (92 > 88)
+   --> src\core\printer.py:114:89
+    |
+112 |     def _print_image(self, file_path: str, printer_name: str, page_type: str) -> None:
+113 |         """
+114 |         Sends an image file directly to the printer graphics context with active monitoring.
+    |                                                                                         ^^^^
+115 |
+116 |         Args:
+    |
+
+E501 Line too long (96 > 88)
+   --> src\core\printer.py:122:89
+    |
+121 |         Raises:
+122 |             RuntimeError: If the hardware context cannot be opened or fails during transmission.
+    |                                                                                         ^^^^^^^^
+123 |         """
+124 |         hprinter = None
+    |
+
+E501 Line too long (95 > 88)
+   --> src\core\printer.py:188:89
+    |
+186 |                 win32print.ClosePrinter(hprinter)
+187 |
+188 |         # Trigger active queue monitoring right after sending data and releasing hardware locks
+    |                                                                                         ^^^^^^^
+189 |         self._monitor_device_queue(printer_name)
+    |
+
+E501 Line too long (90 > 88)
+   --> src\core\printer.py:191:89
+    |
+189 |         self._monitor_device_queue(printer_name)
+190 |
+191 |     def _monitor_device_queue(self, printer_name: str, timeout_seconds: int = 30) -> None:
+    |                                                                                         ^^
+192 |         """
+193 |         Monitors the active printer queue until all current jobs clear or fail
+    |
+
+E501 Line too long (94 > 88)
+   --> src\core\printer.py:197:89
+    |
+195 |         Args:
+196 |             printer_name (str): Target printer to monitor
+197 |             timeout_seconds (int): Maximum time to wait for the queue to clear. Defaults to 30
+    |                                                                                         ^^^^^^
+198 |         """
+199 |         hprinter = win32print.OpenPrinter(printer_name)
+    |
+
+E501 Line too long (113 > 88)
+   --> src\core\printer.py:207:89
+    |
+205 |                 if time.time() - start_time > timeout_seconds:
+206 |                     raise DeviceTimeoutError(
+207 |                         f"Tiempo de espera agotado ({timeout_seconds}s). El trabajo sigue en la cola de Windows."
+    |                                                                                         ^^^^^^^^^^^^^^^^^^^^^^^^^
+208 |                     )
+    |
+
+E501 Line too long (97 > 88)
+   --> src\core\printer.py:221:89
+    |
+219 |                     status = jobs[0].get("Status", 0)
+220 |                     if status & win32print.JOB_STATUS_ERROR:
+221 |                         raise HardwareError("La impresora reportó un error crítico de hardware.")
+    |                                                                                         ^^^^^^^^^
+222 |                     elif status & win32print.JOB_STATUS_PAPEROUT:
+223 |                         raise HardwareError("La impresora se ha quedado sin papel o está atascada.")
+    |
+
+E501 Line too long (100 > 88)
+   --> src\core\printer.py:223:89
+    |
+221 |                         raise HardwareError("La impresora reportó un error crítico de hardware.")
+222 |                     elif status & win32print.JOB_STATUS_PAPEROUT:
+223 |                         raise HardwareError("La impresora se ha quedado sin papel o está atascada.")
+    |                                                                                         ^^^^^^^^^^^^
+224 |                     elif status & win32print.JOB_STATUS_OFFLINE:
+225 |                         raise HardwareError("La impresora cambió a estado fuera de línea.")
+    |
+
+E501 Line too long (91 > 88)
+   --> src\core\printer.py:225:89
+    |
+223 |                         raise HardwareError("La impresora se ha quedado sin papel o está atascada.")
+224 |                     elif status & win32print.JOB_STATUS_OFFLINE:
+225 |                         raise HardwareError("La impresora cambió a estado fuera de línea.")
+    |                                                                                         ^^^
+226 |
+227 |                 time.sleep(0.5)
+    |
+
+I001 [*] Import block is un-sorted or un-formatted
+  --> src\processing\docs\doc_strategy.py:1:1
+   |
+ 1 | / import os
+ 2 | | import time
+ 3 | | import subprocess
+ 4 | |
+ 5 | | from abc import ABC, abstractmethod
+ 6 | | from typing import Optional
+ 7 | |
+ 8 | | from src.utils.logger import logger
+   | |___________________________________^
+ 9 |
+10 |   try:
+   |
+help: Organize imports
+
+I001 [*] Import block is un-sorted or un-formatted
+  --> src\processing\docs\doc_strategy.py:11:5
+   |
+10 |   try:
+11 | /     import win32com.client
+12 | |     import pythoncom
+13 | |     import win32print
+   | |_____________________^
+14 |   except ImportError:
+15 |       win32com = None
+   |
+help: Organize imports
+
+E501 Line too long (89 > 88)
+  --> src\processing\docs\doc_strategy.py:30:89
+   |
+28 |         Args:
+29 |             file_path (str): The absolute path to the document
+30 |             printer_name (Optional[str], optional): The target printer. Defaults to None.
+   |                                                                                         ^
+31 |
+32 |         Returns:
+   |
+
+E501 Line too long (89 > 88)
+  --> src\processing\docs\doc_strategy.py:49:89
+   |
+47 |         Args:
+48 |             file_path (str): The absolute path to the document
+49 |             printer_name (Optional[str], optional): The target printer. Defaults to None.
+   |                                                                                         ^
+50 |
+51 |         Returns:
+   |
+
+F841 [*] Local variable `e` is assigned to but never used
+  --> src\processing\docs\doc_strategy.py:78:29
+   |
+76 |             return True
+77 |         
+78 |         except Exception as e:
+   |                             ^
+79 |
+80 |             logger.exception("COM automation failed")
+   |
+help: Remove assignment to unused variable `e`
+
+E501 Line too long (121 > 88)
+  --> src\processing\docs\doc_strategy.py:82:89
+   |
+80 |             logger.exception("COM automation failed")
+81 |             raise RuntimeError(
+82 |                 "Fallo al procesar el documento con Microsoft Word. Es posible que el archivo esté corrupto o bloqueado."
+   |                                                                                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+83 |             )
+   |
+
+F541 [*] f-string without any placeholders
+   --> src\processing\docs\doc_strategy.py:110:13
+    |
+108 |         """
+109 |         common_paths = [
+110 |             f"C:\Program Files\LibreOffice\program\soffice.exe",
+    |             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+111 |             f"C:\Program Files (x86)\LibreOffice\program\soffice.exe"
+112 |         ]
+    |
+help: Remove extraneous `f` prefix
+
+F541 [*] f-string without any placeholders
+   --> src\processing\docs\doc_strategy.py:111:13
+    |
+109 |         common_paths = [
+110 |             f"C:\Program Files\LibreOffice\program\soffice.exe",
+111 |             f"C:\Program Files (x86)\LibreOffice\program\soffice.exe"
+    |             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+112 |         ]
+113 |         for path in common_paths:
+    |
+help: Remove extraneous `f` prefix
+
+E501 Line too long (90 > 88)
+   --> src\processing\docs\doc_strategy.py:127:89
+    |
+126 |         Returns:
+127 |             bool: True if LibreOffice executed successfully, False if it is not installed.
+    |                                                                                         ^^
+128 |             
+129 |         Raises:
+    |
+
+E501 Line too long (93 > 88)
+   --> src\processing\docs\doc_strategy.py:136:89
+    |
+135 |         try:
+136 |             target_printer = printer_name if printer_name else win32print.GetDefaultPrinter()
+    |                                                                                         ^^^^^
+137 |             
+138 |             command = [
+    |
+
+E501 Line too long (90 > 88)
+   --> src\processing\docs\doc_strategy.py:167:89
+    |
+165 |     Args:
+166 |         file_path (str): Path to the target document
+167 |         printer_name (Optional[str], optional): Target hardware printer. Defaults to None.
+    |                                                                                         ^^
+168 |     """
+    |
+
+E501 Line too long (109 > 88)
+   --> src\processing\docs\doc_strategy.py:179:89
+    |
+178 |     raise RuntimeError(
+179 |         "No se puede imprimir el documento. Instala Microsoft Word o LibreOffice para habilitar esta funcion"
+    |                                                                                         ^^^^^^^^^^^^^^^^^^^^^
+180 |     )
+    |
+
+I001 [*] Import block is un-sorted or un-formatted
+ --> src\processing\docs\document.py:1:1
+  |
+1 | / from typing import List
+2 | |
+3 | | import docx
+4 | | from PIL import Image, ImageDraw, ImageFont
+5 | |
+6 | | from src.core.processing.images.image import cm_to_pixels
+7 | | from src.utils.config import TARGET_DPI, PAGE_SIZES
+  | |___________________________________________________^
+  |
+help: Organize imports
+
+E501 Line too long (91 > 88)
+  --> src\processing\docs\document.py:18:89
+   |
+17 |     Returns:
+18 |         str: A single string containing all the text extracted from the document paragraphs
+   |                                                                                         ^^^
+19 |     """
+   |
+
+E501 Line too long (92 > 88)
+  --> src\processing\docs\document.py:30:89
+   |
+30 | def convert_text_to_printable_images(text: str, dpi: int = TARGET_DPI) -> List[Image.Image]:
+   |                                                                                         ^^^^
+31 |     """
+32 |     Converts a raw text info into a list of lightweight PIL images formatted for printing
+   |
+
+E501 Line too long (89 > 88)
+  --> src\processing\docs\document.py:32:89
+   |
+30 | def convert_text_to_printable_images(text: str, dpi: int = TARGET_DPI) -> List[Image.Image]:
+31 |     """
+32 |     Converts a raw text info into a list of lightweight PIL images formatted for printing
+   |                                                                                         ^
+33 |
+34 |     Args:
+   |
+
+I001 [*] Import block is un-sorted or un-formatted
+ --> src\processing\images\grid.py:1:1
+  |
+1 | / from typing import List
+2 | | from PIL import Image
+3 | |
+4 | | from src.core.processing.images.image import cm_to_pixels
+5 | | from src.utils.config import PAGE_SIZES, TARGET_DPI
+  | |___________________________________________________^
+  |
+help: Organize imports
+
+E501 Line too long (135 > 88)
+  --> src\processing\images\grid.py:8:89
+   |
+ 8 | def create_grid_canvas(images: List[Image.Image], grid_size: int = 4, page_type: str = "letter", dpi: int = TARGET_DPI) -> Image.Image:
+   |                                                                                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+ 9 |     """
+10 |     Arranges a list of images into an N-up grid layout on a single blank canvas
+   |
+
+E501 Line too long (89 > 88)
+  --> src\processing\images\grid.py:14:89
+   |
+12 |     Args:
+13 |         images (List[Image.Image]): A list of PIL Image objects to place in grid
+14 |         grid_size (int, optional): Total slots in the grid (e.g. 2, 4, 6). Defaults to 4.
+   |                                                                                         ^
+15 |         page_type (str, optional): Standard page constraint. Defaults to "letter".
+16 |         dpi (int, optional): Target resolution for printing. Defaults to TARGET_DPI.
+   |
+
+I001 [*] Import block is un-sorted or un-formatted
+ --> src\processing\images\image.py:1:1
+  |
+1 | / from PIL import Image
+2 | | from src.utils.config import INCH_PER_CM, TARGET_DPI, PAGE_SIZES
+  | |________________________________________________________________^
+  |
+help: Organize imports
+
+E501 Line too long (154 > 88)
+  --> src\processing\images\image.py:20:89
+   |
+20 | … = None, height_cm: float = None, page_type: str = "letter", dpi: int = TARGET_DPI) -> Image.Image:
+   |                                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+21 | …
+22 | …
+   |
+
+E501 Line too long (95 > 88)
+  --> src\processing\images\image.py:75:89
+   |
+75 | def save_image_for_printing(img: Image.Image, output_path: str, dpi: int = TARGET_DPI) -> None:
+   |                                                                                         ^^^^^^^
+76 |     """
+77 |     Save the Image object inserting the DPI metadata correctly
+   |
+
+I001 [*] Import block is un-sorted or un-formatted
+  --> src\ui\main_window.py:1:1
+   |
+ 1 | / import os
+ 2 | |
+ 3 | | import tkinter as tk
+ 4 | | from PIL import Image, ImageTk
+ 5 | | from contextlib import ExitStack
+ 6 | | from typing import Optional
+ 7 | |
+ 8 | | from tkinter import ttk, filedialog, messagebox
+ 9 | | from threading import Thread
+10 | |
+11 | | from src.core.processing.images.image import resize_image_to_cm, save_image_for_printing
+12 | | from src.core.processing.images.grid import create_grid_canvas
+13 | | from src.core.processing.docs.doc_strategy import print_document_smart
+14 | |
+15 | | from src.core.printer import PrintManager
+16 | | from src.core.exceptions import translate_exception
+17 | |
+18 | | from src.utils.config import (IMAGE_EXTENSIONS, DOC_EXTENSIONS, TARGET_DPI)
+19 | | from src.utils.logger import logger
+   | |___________________________________^
+20 |
+21 |   AVAILABLE_EXTENSIONS = [
+   |
+help: Organize imports
+
+E501 Line too long (89 > 88)
+  --> src\ui\main_window.py:38:89
+   |
+37 | class FastPrintApp:
+38 |     """Core GUI Class that manages the fast print tool workflow and user interactions."""
+   |                                                                                         ^
+39 |
+40 |     def __init__(self, root):
+   |
+
+E501 Line too long (92 > 88)
+   --> src\ui\main_window.py:133:89
+    |
+131 |             side=tk.LEFT, padx=2)
+132 |         ttk.Radiobutton(page_frame, text="Carta (Letter)",
+133 |                         variable=self.page_type, value="letter").pack(side=tk.LEFT, padx=10)
+    |                                                                                         ^^^^
+134 |         ttk.Radiobutton(page_frame, text="A4", variable=self.page_type,
+135 |                         value="a4").pack(side=tk.LEFT, padx=10)
+    |
+
+E501 Line too long (94 > 88)
+   --> src\ui\main_window.py:145:89
+    |
+144 |         print_chk = ttk.Checkbutton(
+145 |             hardware_lf, text="Enviar directo a la impresora", variable=self.is_print_enabled)
+    |                                                                                         ^^^^^^
+146 |         print_chk.pack(side=tk.LEFT, padx=5)
+    |
+
+F541 [*] f-string without any placeholders
+   --> src\ui\main_window.py:234:21
+    |
+232 |                 self.is_grid_enabled.set(True)
+233 |                 messagebox.showwarning(
+234 |                     f"Restriccion", "El procesamiento de carpetas requiere activar la cuadricula")
+    |                     ^^^^^^^^^^^^^^
+235 |             else:
+236 |                 self.grid_combo.config(state="disabled")
+    |
+help: Remove extraneous `f` prefix
+
+E501 Line too long (98 > 88)
+   --> src\ui\main_window.py:234:89
+    |
+232 |                 self.is_grid_enabled.set(True)
+233 |                 messagebox.showwarning(
+234 |                     f"Restriccion", "El procesamiento de carpetas requiere activar la cuadricula")
+    |                                                                                         ^^^^^^^^^^
+235 |             else:
+236 |                 self.grid_combo.config(state="disabled")
+    |
+
+E501 Line too long (98 > 88)
+   --> src\ui\main_window.py:261:89
+    |
+259 |         if not self.selected_path.get():
+260 |             messagebox.showwarning(
+261 |                 "Falta informacion", "Por Favor, selecciona un archivo válido antes de continuar")
+    |                                                                                         ^^^^^^^^^^
+262 |             return
+    |
+
+E501 Line too long (102 > 88)
+   --> src\ui\main_window.py:266:89
+    |
+264 |         self.action_btn.config(state="disabled")
+265 |         self.status_lbl.config(
+266 |             text="Estado: Procesando archivo en segundo plano... Por favor espera", foreground="blue")
+    |                                                                                         ^^^^^^^^^^^^^^
+267 |
+268 |         # Extract all Tkinter variables safely in the main thread
+    |
+
+E501 Line too long (92 > 88)
+   --> src\ui\main_window.py:275:89
+    |
+273 |             "printer": self.target_printer.get(),
+274 |             "grid_enabled": self.is_grid_enabled.get(),
+275 |             "grid_size": int(self.grid_combo.get()) if self.is_grid_enabled.get() else None,
+    |                                                                                         ^^^^
+276 |             "page": self.page_type.get(),
+277 |             "w_cm": float(self.width_ent.get()) if self.width_ent.get() else None,
+    |
+
+E501 Line too long (173 > 88)
+   --> src\ui\main_window.py:285:89
+    |
+283 | …
+284 | …
+285 | …now: bool, printer: Optional[str], grid_enabled: bool, grid_size: int, page: str, w_cm: float, h_cm: float):
+    |                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+286 | …
+287 | …ecution routines.
+    |
+
+F541 [*] f-string without any placeholders
+   --> src\ui\main_window.py:304:25
+    |
+302 |                 if not file_list:
+303 |                     raise ValueError(
+304 |                         f"No se encontraron imágenes compatibles (.jpg, .png) en la carpeta")
+    |                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+305 |
+306 |                 output_dir = os.path.join(path, "FastPrint_Output")
+    |
+help: Remove extraneous `f` prefix
+
+E501 Line too long (93 > 88)
+   --> src\ui\main_window.py:304:89
+    |
+302 |                 if not file_list:
+303 |                     raise ValueError(
+304 |                         f"No se encontraron imágenes compatibles (.jpg, .png) en la carpeta")
+    |                                                                                         ^^^^^
+305 |
+306 |                 output_dir = os.path.join(path, "FastPrint_Output")
+    |
+
+E501 Line too long (93 > 88)
+   --> src\ui\main_window.py:318:89
+    |
+317 |                         with create_grid_canvas(
+318 |                             images=chunk_images, grid_size=grid_size, page_type=page, dpi=dpi
+    |                                                                                         ^^^^^
+319 |                         ) as grid_canvas:
+    |
+
+E501 Line too long (118 > 88)
+   --> src\ui\main_window.py:346:89
+    |
+344 |                         with Image.open(path) as source_img:
+345 |                             with create_grid_canvas(
+346 |                                     [source_img] * grid_size, grid_size=grid_size, page_type=page, dpi=dpi) as canvas:
+    |                                                                                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+347 |
+348 |                                 save_image_for_printing(
+    |
+
+E501 Line too long (94 > 88)
+   --> src\ui\main_window.py:374:89
+    |
+372 |     def _open_preview_modal(self, output_path: str, printer: str, page: str):
+373 |         """
+374 |         Creates a modern separate popup window for verifying layout components before printing
+    |                                                                                         ^^^^^^
+375 |
+376 |         Args:
+    |
+
+E501 Line too long (118 > 88)
+   --> src\ui\main_window.py:414:89
+    |
+413 |         if file_extension in [".pdf", ".docx"]:
+414 |             display_lbl.config(text=f"Vista previa no disponible\npara archivos nativos {file_extension.upper()}.\n\n"
+    |                                                                                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+415 |                                f"El archivo está listo para ser enviado\nal hardware de forma segura.")
+416 |             self.modal_preview_img_ref = None
+    |
+
+E501 Line too long (103 > 88)
+   --> src\ui\main_window.py:415:89
+    |
+413 |         if file_extension in [".pdf", ".docx"]:
+414 |             display_lbl.config(text=f"Vista previa no disponible\npara archivos nativos {file_extension.upper()}.\n\n"
+415 |                                f"El archivo está listo para ser enviado\nal hardware de forma segura.")
+    |                                                                                         ^^^^^^^^^^^^^^^
+416 |             self.modal_preview_img_ref = None
+    |
+
+E501 Line too long (108 > 88)
+   --> src\ui\main_window.py:440:89
+    |
+438 |         cancel_btn.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=(0, 5))
+439 |
+440 |         print_btn = ttk.Button(actions_frame, text="Imprimir ahora", command=lambda: self._send_to_hardware(
+    |                                                                                         ^^^^^^^^^^^^^^^^^^^^
+441 |             output_path=output_path, printer=printer, page=page, window=preview_win))
+442 |         print_btn.pack(side=tk.RIGHT, fill=tk.X, expand=True, padx=(5, 0))
+    |
+
+E501 Line too long (96 > 88)
+   --> src\ui\main_window.py:444:89
+    |
+442 |         print_btn.pack(side=tk.RIGHT, fill=tk.X, expand=True, padx=(5, 0))
+443 |
+444 |     def _send_to_hardware(self, output_path: str, printer: str, page: str, window: tk.Toplevel):
+    |                                                                                         ^^^^^^^^
+445 |         """
+446 |         Asynchronously dispatches the confirmed template target out to the physical spooler queue
+    |
+
+E501 Line too long (97 > 88)
+   --> src\ui\main_window.py:446:89
+    |
+444 |     def _send_to_hardware(self, output_path: str, printer: str, page: str, window: tk.Toplevel):
+445 |         """
+446 |         Asynchronously dispatches the confirmed template target out to the physical spooler queue
+    |                                                                                         ^^^^^^^^^
+447 |
+448 |         Args:
+    |
+
+E501 Line too long (95 > 88)
+   --> src\ui\main_window.py:457:89
+    |
+455 |         window.destroy()
+456 |         self.status_lbl.config(
+457 |             text="Estado: Comunicandose con el dispositivo de impresion...", foreground="blue")
+    |                                                                                         ^^^^^^^
+458 |
+459 |         def print_worker():
+    |
+
+E501 Line too long (95 > 88)
+   --> src\ui\main_window.py:491:89
+    |
+489 |         self.action_btn.config(state="normal")
+490 |         self.status_lbl.config(
+491 |             text="Estado: ¡Operación completada con éxito en el hardware!", foreground="green")
+    |                                                                                         ^^^^^^^
+492 |         messagebox.showinfo(
+493 |             "Éxito", "El documento ha sido procesado e impreso de forma segura.")
+    |
+
+Found 62 errors.
+[*] 13 fixable with the `--fix` option.

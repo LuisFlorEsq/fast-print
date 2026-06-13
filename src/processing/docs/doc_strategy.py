@@ -5,6 +5,7 @@ import subprocess
 from abc import ABC, abstractmethod
 from typing import Optional
 
+from src.utils.logger import logger
 
 try:
     import win32com.client
@@ -76,7 +77,7 @@ class WordComStrategy(DocumentPrintStrategy):
         
         except Exception as e:
 
-            print(f"COM Automation Error: {e}")
+            logger.exception("COM automation failed")
             raise RuntimeError(
                 "Fallo al procesar el documento con Microsoft Word. Es posible que el archivo esté corrupto o bloqueado."
             )
