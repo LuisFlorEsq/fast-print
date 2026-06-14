@@ -3,8 +3,8 @@ from typing import List
 import docx
 from PIL import Image, ImageDraw, ImageFont
 
-from src.core.processing.images.image import cm_to_pixels
-from src.utils.config import TARGET_DPI, PAGE_SIZES
+from src.processing.images.image import cm_to_pixels
+from src.utils.config import PAGE_SIZES, TARGET_DPI
 
 
 def extract_text_from_docx(file_path: str) -> str:

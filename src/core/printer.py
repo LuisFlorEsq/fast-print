@@ -2,15 +2,20 @@ import os
 import sys
 import time
 from typing import List, Optional
+
 from PIL import Image, ImageWin
 
-from src.core.exceptions import HardwareError, DeviceTimeoutError
+from src.core.exceptions import (
+    HardwareError,
+    PrintError,
+    QueueTimeoutError,
+)
 from src.utils.logger import logger
 
 if sys.platform == "win32":
+    import win32api
     import win32print
     import win32ui
-    import win32api
 
 
 class PrintManager:
@@ -52,28 +57,28 @@ class PrintManager:
 
         return [printer[2] for printer in printer_tuples]
 
-    def send_to_printer(self, file_path: str, printer_name: Optional[str] = None, page_type: str = "letter") -> None:
+    def send_to_printer(
+        self, file_path: str, printer_name: Optional[str] = None, page_type: str = "letter"
+    ) -> None:
         """
         Dispatches a file to the specified Windows print spooler safely
 
         Args:
             file_path (str): The absolute path to the file to be printed
-            printer_name (Optional[str], optional): The name of the specific printer device. Defaults to None.
+            printer_name (Optional[str], optional): Name of the printer device. Defaults to None.
             page_type (str, optional): The page size to format. Defaults to "letter".
         """
         if not os.path.exists(file_path):
-            raise FileNotFoundError(
-                F"No se pudo encontrar el archivo en la ruta: {file_path}")
+            raise FileNotFoundError(f"No se pudo encontrar el archivo en la ruta: {file_path}")
 
         if sys.platform != "win32":
-            raise RuntimeError(
-                "La impresion directa solo esta optimizada para sistemas Windows")
+            raise PrintError("La impresion directa solo esta optimizada para sistemas Windows")
 
         target_device = printer_name if printer_name else win32print.GetDefaultPrinter()
-        
+
         logger.info(f"Sending file to printer: file={file_path}, printer={target_device}")
 
-        if file_path.lower().endswith('.pdf'):
+        if file_path.lower().endswith(".pdf"):
             self._print_pdf(file_path, target_device)
 
         else:
@@ -89,21 +94,15 @@ class PrintManager:
         """
         old_printer = None
         try:
-
             old_printer = win32print.GetDefaultPrinter()
             win32print.SetDefaultPrinter(printer_name)
 
-            win32api.ShellExecute(
-                0,
-                "print",
-                file_path,
-                None,
-                ".",
-                0
-            )
+            win32api.ShellExecute(0, "print", file_path, None, ".", 0)
             time.sleep(3.0)
         except Exception as e:
-            raise HardwareError(f"Fallo crítico al enviar el archivo PDF al spooler: {str(e)}") from e
+            raise HardwareError(
+                f"Fallo crítico al enviar el archivo PDF al spooler: {str(e)}"
+            ) from e
 
         finally:
             if old_printer:
@@ -111,7 +110,6 @@ class PrintManager:
                     win32print.SetDefaultPrinter(old_printer)
                 except Exception:
                     logger.exception("Failed to restore default printer")
-                    
 
     def _print_image(self, file_path: str, printer_name: str, page_type: str) -> None:
         """
@@ -168,16 +166,16 @@ class PrintManager:
 
                 # Convert image to Windows Device Independent Bitmap (DIB) and draw
                 dib = ImageWin.Dib(img)
-                dib.draw(hdc.GetSafeHdc(), (x_offset, y_offset,
-                                            x_offset + draw_w, y_offset + draw_h))
+                dib.draw(
+                    hdc.GetSafeHdc(), (x_offset, y_offset, x_offset + draw_w, y_offset + draw_h)
+                )
 
             # Finish the page and document processing
             hdc.EndPage()
             hdc.EndDoc()
 
         except Exception as e:
-            raise RuntimeError(
-                f"Error de hardware al procesar la imagen: {str(e)}")
+            raise HardwareError(f"Error de hardware al procesar la imagen: {str(e)}")
 
         finally:
             if hdc:
@@ -201,16 +199,16 @@ class PrintManager:
             timeout_seconds (int): Maximum time to wait for the queue to clear. Defaults to 30
         """
         logger.info(f"Monitoring print queue for printer {printer_name}")
-        
+
         hprinter = win32print.OpenPrinter(printer_name)
         start_time = time.time()
 
         try:
             while True:
-
                 if time.time() - start_time > timeout_seconds:
-                    raise DeviceTimeoutError(
-                        f"Tiempo de espera agotado ({timeout_seconds}s). El trabajo sigue en la cola de Windows."
+                    raise QueueTimeoutError(
+                        f"Tiempo de espera agotado ({timeout_seconds}s)."
+                        "El trabajo sigue en la cola de Windows."
                     )
 
                 printer_info = win32print.GetPrinter(hprinter, 2)
@@ -227,7 +225,9 @@ class PrintManager:
                     if status & win32print.JOB_STATUS_ERROR:
                         raise HardwareError("La impresora reportó un error crítico de hardware.")
                     elif status & win32print.JOB_STATUS_PAPEROUT:
-                        raise HardwareError("La impresora se ha quedado sin papel o está atascada.")
+                        raise HardwareError(
+                            "La impresora se ha quedado sin papel o está atascada."
+                        )
                     elif status & win32print.JOB_STATUS_OFFLINE:
                         raise HardwareError("La impresora cambió a estado fuera de línea.")
 

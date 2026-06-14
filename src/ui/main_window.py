@@ -7,23 +7,14 @@ from typing import Optional
 
 from PIL import Image, ImageTk
 
-from src.core.exceptions import translate_exception
+from src.core import exceptions
 from src.core.printer import PrintManager
 from src.processing.docs.doc_strategy import print_document_smart
 from src.processing.images.grid import create_grid_canvas
 from src.processing.images.image import resize_image_to_cm, save_image_for_printing
+from src.utils import validators
 from src.utils.config import DOC_EXTENSIONS, IMAGE_EXTENSIONS, TARGET_DPI
 from src.utils.logger import logger
-from src.utils.validators import (
-    validate_dimensions,
-    validate_docx_file,
-    validate_image_file,
-    validate_image_fits,
-    validate_page_type,
-    validate_path,
-    validate_pdf_file,
-    validate_printer,
-)
 
 AVAILABLE_EXTENSIONS = [
     (
@@ -245,7 +236,7 @@ class FastPrintApp:
             if self.is_directory.get():
                 self.is_grid_enabled.set(True)
                 messagebox.showwarning(
-                    f"Restriccion",
+                    "Restriccion",
                     "El procesamiento de carpetas requiere activar la cuadricula",
                 )
             else:
@@ -264,7 +255,8 @@ class FastPrintApp:
 
             if printers:
                 self.printer_combo.set(printers[0])  # Initial value
-        except Exception:
+        except exceptions.PrinterNotFoundError as e:
+            messagebox.showerror("Printer Error", str(e))
             self.printer_combo["values"] = ["Default Printer"]
             self.printer_combo.set("Default Printer")
 
@@ -282,14 +274,14 @@ class FastPrintApp:
         # Inputh fields validation
         try:
             selected_path = self.selected_path.get()
-            validate_path(selected_path)
+            validators.validate_path(selected_path)
 
             page = self.page_type.get()
-            validate_page_type(page)
+            validators.validate_page_type(page)
 
             printer = self.target_printer.get()
             available_printers = list(self.printer_combo["values"])
-            validate_printer(printer, available_printers)
+            validators.validate_printer(printer, available_printers)
 
             width = float(self.width_ent.get()) if self.width_ent.get() else None
             height = float(self.height_ent.get()) if self.height_ent.get() else None
@@ -298,23 +290,25 @@ class FastPrintApp:
                 extension = selected_path.lower()
 
                 if extension.endswith((".png", ".jpg", ".jpeg")):
-                    validate_image_file(selected_path)
+                    validators.validate_image_file(selected_path)
 
                     if not self.is_grid_enabled.get():
-                        validate_dimensions(width, height)
-                        validate_image_fits(width, height, page)
+                        validators.validate_dimensions(width, height)
+                        validators.validate_image_fits(width, height, page)
 
                 elif extension.endswith(".pdf"):
-                    validate_pdf_file(selected_path)
+                    validators.validate_pdf_file(selected_path)
 
                 elif extension.endswith(".docx"):
-                    validate_docx_file(selected_path)
+                    validators.validate_docx_file(selected_path)
 
-        except ValueError:
-            messagebox.showerror("Input Error", "Width and height must be valid numeric values.")
+        except exceptions.ValidationError as e:
+            messagebox.showerror(
+                "Validation error", str(e)
+            )
             return
 
-        except Exception as e:
+        except exceptions.ValidationError as e:
             logger.warning(f"Validation failed: {e}")
             messagebox.showerror("Validation Error", str(e))
             return
@@ -373,7 +367,7 @@ class FastPrintApp:
 
                 if not file_list:
                     raise ValueError(
-                        f"No se encontraron imágenes compatibles (.jpg, .png) en la carpeta"
+                        "No se encontraron imágenes compatibles (.jpg, .png) en la carpeta"
                     )
 
                 output_dir = os.path.join(path, "FastPrint_Output")
@@ -440,9 +434,9 @@ class FastPrintApp:
                 ),
             )
 
-        except Exception as e:
+        except exceptions.FastPrintError as e:
             logger.exception("Error captured in the background print processing thread.")
-            error_clean_msg = translate_exception(e)
+            error_clean_msg = exceptions.translate_exception(e)
 
             self.root.after(0, lambda: self._handle_error(err_msg=error_clean_msg))
 
@@ -487,8 +481,9 @@ class FastPrintApp:
 
         if file_extension in [".pdf", ".docx"]:
             display_lbl.config(
-                text=f"Vista previa no disponible\npara archivos nativos {file_extension.upper()}.\n\n"
-                f"El archivo está listo para ser enviado\nal hardware de forma segura."
+                text="Vista previa no disponible\n"
+                f"Para archivos nativos {file_extension.upper()}.\n\n"
+                "El archivo está listo para ser enviado\nal hardware de forma segura."
             )
             self.modal_preview_img_ref = None
 
@@ -500,7 +495,7 @@ class FastPrintApp:
                     self.modal_preview_img_ref = ImageTk.PhotoImage(preview_copy)
                     display_lbl.config(image=self.modal_preview_img_ref)
 
-            except Exception as e:
+            except exceptions.FastPrintError as e:
                 display_lbl.config(text=f"Error al cargar la visualizacion detallada:\n{str(e)}")
 
         # Action buttons Layout
@@ -555,9 +550,9 @@ class FastPrintApp:
 
                 self.root.after(0, self._handle_success)
 
-            except Exception as e:
+            except exceptions.HardwareError as e:
                 logger.exception("Critical fail occurred during print spooler transmission.")
-                error_clean_msg = translate_exception(e)
+                error_clean_msg = exceptions.translate_exception(e)
                 self.root.after(0, lambda: self._handle_error(err_msg=error_clean_msg))
 
         hardware_thread = Thread(target=print_worker)

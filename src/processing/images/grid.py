@@ -1,11 +1,18 @@
 from typing import List
+
 from PIL import Image
 
+from src.core.exceptions import ImageProcessingError
 from src.processing.images.image import cm_to_pixels
 from src.utils.config import PAGE_SIZES, TARGET_DPI
 
 
-def create_grid_canvas(images: List[Image.Image], grid_size: int = 4, page_type: str = "letter", dpi: int = TARGET_DPI) -> Image.Image:
+def create_grid_canvas(
+    images: List[Image.Image],
+    grid_size: int = 4,
+    page_type: str = "letter",
+    dpi: int = TARGET_DPI,
+) -> Image.Image:
     """
     Arranges a list of images into an N-up grid layout on a single blank canvas
 
@@ -20,12 +27,10 @@ def create_grid_canvas(images: List[Image.Image], grid_size: int = 4, page_type:
     """
 
     if page_type not in PAGE_SIZES:
-        raise ValueError(
-            f"Unsupported page type: {page_type}. Choose 'letter' or 'A4'")
+        raise ImageProcessingError(f"Unsupported page type: {page_type}. Choose 'letter' or 'A4'")
 
     if grid_size % 2 != 0 or grid_size < 2:
-        raise ValueError(
-            "Grid Size must be an even number greater than or equal to 2")
+        raise ImageProcessingError("Grid Size must be an even number greater than or equal to 2")
 
     width_cm, height_cm = PAGE_SIZES[page_type]
     canvas_w = cm_to_pixels(width_cm, dpi)
@@ -69,10 +74,8 @@ def create_grid_canvas(images: List[Image.Image], grid_size: int = 4, page_type:
 
             resized_img = img.resize((new_w, new_h), Image.Resampling.BILINEAR)
 
-            x_offset = edge_margin + c * \
-                (slot_w + margin) + (slot_w - new_w) // 2
-            y_offset = edge_margin + r * \
-                (slot_h + margin) + (slot_h - new_h) // 2
+            x_offset = edge_margin + c * (slot_w + margin) + (slot_w - new_w) // 2
+            y_offset = edge_margin + r * (slot_h + margin) + (slot_h - new_h) // 2
 
             canvas.paste(resized_img, (x_offset, y_offset))
 

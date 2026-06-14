@@ -1,24 +1,69 @@
-class FastPrintException(Exception):
-    """Configure the base for all the exceptions on FastPrint application"""
+class FastPrintError(Exception):
+    """Base exception for FastPrint."""
+
     pass
 
 
-class ValidationError(FastPrintException):
-    """Raised when user input validation fails"""
+# ----------------------------
+# Validation
+# ----------------------------
+class ValidationError(FastPrintError):
+    """Raised when user input is invalid."""
 
-
-class HardwareError(FastPrintException):
-    """Launches when the physical printer or the Windows spooler reports an error"""
     pass
 
 
-class DocumentProcessingError(FastPrintException):
-    """Launches when a file (Image, PDF, DOCX ) fails during preparation or rendering"""
+# ----------------------------
+# Processing
+# ----------------------------
+class ProcessingError(FastPrintError):
+    """Base processing exception."""
+
     pass
 
 
-class DeviceTimeoutError(FastPrintException):
-    """Launches when the printer queue jobs reach the time limit"""
+class ImageProcessingError(ProcessingError):
+    """Raised during image processing failures."""
+
+    pass
+
+
+class DocumentProcessingError(ProcessingError):
+    """Raised during document processing failures."""
+
+    pass
+
+
+# ----------------------------
+# Printing
+# ----------------------------
+class PrintError(FastPrintError):
+    """Base printer exception."""
+
+    pass
+
+
+class PrinterNotFoundError(PrintError):
+    """Target printer does not exist."""
+
+    pass
+
+
+class HardwareError(PrintError):
+    """Printer hardware failure."""
+
+    pass
+
+
+class QueueTimeoutError(PrintError):
+    """Printer queue stuck too long."""
+
+    pass
+
+
+class PrinterBusyError(PrintError):
+    """Printer is busy or unavailable."""
+
     pass
 
 
@@ -32,7 +77,7 @@ def translate_exception(exc: Exception) -> str:
     Returns:
         str: User ready message to use in messagebox component.
     """
-    if isinstance(exc, (HardwareError, DocumentProcessingError, DeviceTimeoutError)):
+    if isinstance(exc, (HardwareError, DocumentProcessingError, QueueTimeoutError)):
         return str(exc)
 
     msg = str(exc).lower()
@@ -49,12 +94,14 @@ def translate_exception(exc: Exception) -> str:
                 "en Windows configurada para abrir o procesar este tipo de archivo."
             )
         if "access is denied" in msg or "error 5" in msg:
-            return "Error de Permisos (5): Windows denegó el acceso a la impresora. Intenta ejecutar como Administrador."
+            return "Error de Permisos (5): Windows denegó el acceso a la impresora."
+        "Intenta ejecutar como Administrador."
 
         return f"Error en el subsistema de impresión de Windows: {str(exc)}"
 
     if isinstance(exc, FileNotFoundError):
-        return f"Archivo no encontrado: El archivo o ruta especificada no existe en el disco duro.\n({str(exc)})"
+        return "Archivo no encontrado:"
+    f"El archivo o ruta especificada no existe en el disco duro.\n({str(exc)})"
 
     if isinstance(exc, ValueError):
         return f"Error en los datos del formulario: {str(exc)}"

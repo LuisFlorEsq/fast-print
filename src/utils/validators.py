@@ -35,10 +35,10 @@ def validate_dimensions(width_cm: float, height_cm: float) -> None:
     if width_cm is None and height_cm is None:
         raise ValidationError("You must specify width or height")
 
-    if width_cm is not None and width_cm < 0:
+    if width_cm is not None and width_cm <= 0:
         raise ValidationError("Width must be greater than 0 cm")
 
-    if height_cm is not None and height_cm < 0:
+    if height_cm is not None and height_cm <= 0:
         raise ValidationError("Height must be greater than 0 cm")
 
 
