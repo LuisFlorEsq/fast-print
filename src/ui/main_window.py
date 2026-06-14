@@ -7,11 +7,11 @@ from typing import Optional
 
 from PIL import Image, ImageTk
 
+from core.processing.docs.doc_strategy import print_document_smart
+from core.processing.images.grid import create_grid_canvas
+from core.processing.images.image import resize_image_to_cm, save_image_for_printing
 from src.core import exceptions
 from src.core.printer import PrintManager
-from src.processing.docs.doc_strategy import print_document_smart
-from src.processing.images.grid import create_grid_canvas
-from src.processing.images.image import resize_image_to_cm, save_image_for_printing
 from src.utils import validators
 from src.utils.config import DOC_EXTENSIONS, IMAGE_EXTENSIONS, TARGET_DPI
 from src.utils.logger import logger

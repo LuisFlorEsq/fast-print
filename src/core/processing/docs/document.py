@@ -3,7 +3,7 @@ from typing import List
 import docx
 from PIL import Image, ImageDraw, ImageFont
 
-from src.processing.images.image import cm_to_pixels
+from core.processing.images.image import cm_to_pixels
 from src.utils.config import PAGE_SIZES, TARGET_DPI
 
 

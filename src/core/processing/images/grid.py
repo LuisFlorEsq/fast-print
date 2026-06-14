@@ -3,7 +3,7 @@ from typing import List
 from PIL import Image
 
 from src.core.exceptions import ImageProcessingError
-from src.processing.images.image import cm_to_pixels
+from core.processing.images.image import cm_to_pixels
 from src.utils.config import PAGE_SIZES, TARGET_DPI
 
 
