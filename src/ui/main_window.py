@@ -1,19 +1,17 @@
 import os
 import tkinter as tk
-from contextlib import ExitStack
 from threading import Thread
 from tkinter import filedialog, messagebox, ttk
-from typing import Optional
 
 from PIL import Image, ImageTk
 
 from core.processing.docs.doc_strategy import print_document_smart
-from core.processing.images.grid import create_grid_canvas
-from core.processing.images.image import resize_image_to_cm, save_image_for_printing
+from src.app.dto.print_request import PrintRequest
+from src.app.services.print_service import PrintService
 from src.core import exceptions
 from src.core.printer import PrintManager
 from src.utils import validators
-from src.utils.config import DOC_EXTENSIONS, IMAGE_EXTENSIONS, TARGET_DPI
+from src.utils.config import DOC_EXTENSIONS, IMAGE_EXTENSIONS
 from src.utils.logger import logger
 
 AVAILABLE_EXTENSIONS = [
@@ -32,11 +30,14 @@ class FastPrintApp:
     tool workflow and user interactions.
     """
 
-    def __init__(self, root):
+    def __init__(self, root, print_service: PrintService = None):
         self.root = root
         self.root.title("Fast Print Tool")
         self.root.geometry("520x450")
         self.root.resizable(False, False)
+
+        # Inject print service
+        self.print_service = print_service or PrintService()
 
         # Configure TTK style context
         self.style = ttk.Style()
@@ -303,9 +304,7 @@ class FastPrintApp:
                     validators.validate_docx_file(selected_path)
 
         except exceptions.ValidationError as e:
-            messagebox.showerror(
-                "Validation error", str(e)
-            )
+            messagebox.showerror("Validation error", str(e))
             return
 
         except exceptions.ValidationError as e:
@@ -319,135 +318,58 @@ class FastPrintApp:
             foreground="blue",
         )
 
-        # Extract all Tkinter variables safely in the main thread
-        ui_state = {
-            "path": selected_path,
-            "printer": printer,
-            "page": page,
-            "w_cm": width,
-            "h_cm": height,
-            "grid_enabled": self.is_grid_enabled.get(),
-            "grid_size": int(self.grid_combo.get()) if self.is_grid_enabled.get() else None,
-            "is_dir": self.is_directory.get(),
-            "print_now": self.is_print_enabled.get(),
-        }
+        # Construct DTO request
+        request = PrintRequest(
+            path=selected_path,
+            printer=printer,
+            page_type=page,
+            width_cm=width,
+            height_cm=height,
+            grid_size=int(self.grid_combo.get()) if self.is_grid_enabled.get() else None,
+            is_directory=self.is_directory.get(),
+            print_now=self.is_print_enabled.get(),
+        )
 
-        worker = Thread(target=self._process_core_logic, kwargs=ui_state)
+        worker = Thread(target=self._run_service_pipeline, args=(request,))
         worker.daemon = True
         worker.start()
 
-    def _process_core_logic(
-        self,
-        path: str,
-        is_dir: bool,
-        print_now: bool,
-        printer: Optional[str],
-        grid_enabled: bool,
-        grid_size: int,
-        page: str,
-        w_cm: float,
-        h_cm: float,
-    ):
+    def _run_service_pipeline(self, request: PrintRequest):
         """
-        Translates graphical state into precise decoupled core execution routines.
+        Execute main workflow based on user PrintRequest
+
+        Args:
+            request (PrintRequest): Print request dataclass object
         """
-        try:
-            dpi = TARGET_DPI
-            final_output = None
 
-            # ---------------------------------------------------------------------
-            # PIPELINE FLOW 1: Folder Batch processing
-            # ---------------------------------------------------------------------
-            if is_dir:
-                file_list = [
-                    os.path.join(path, f)
-                    for f in os.listdir(path)
-                    if f.lower().endswith(tuple(IMAGE_EXTENSIONS))
-                ]
+        result = self.print_service.process(request=request)
 
-                if not file_list:
-                    raise ValueError(
-                        "No se encontraron imágenes compatibles (.jpg, .png) en la carpeta"
-                    )
-
-                output_dir = os.path.join(path, "FastPrint_Output")
-                os.makedirs(name=output_dir, exist_ok=True)
-
-                page_number = 1
-                for i in range(0, len(file_list), grid_size):
-                    chunk_paths = file_list[i : i + grid_size]
-
-                    with ExitStack() as stack:
-                        chunk_images = [stack.enter_context(Image.open(p)) for p in chunk_paths]
-
-                        with create_grid_canvas(
-                            images=chunk_images,
-                            grid_size=grid_size,
-                            page_type=page,
-                            dpi=dpi,
-                        ) as grid_canvas:
-                            final_output = os.path.join(
-                                output_dir, f"gui_grid_page_{page_number}_{page}.png"
-                            )
-
-                            save_image_for_printing(
-                                img=grid_canvas, output_path=final_output, dpi=dpi
-                            )
-
-                    page_number += 1
-            # ---------------------------------------------------------------------
-            # PIPELINE FLOW 2: Individual Document or Image processing
-            # ---------------------------------------------------------------------
-            else:
-                # --- Document Flow (pdf, docx) ---
-                if path.lower().endswith((".pdf", ".docx")):
-                    final_output = path
-
-                # --- Standard Image processing ---
-                else:
-                    final_output = f"{os.path.splitext(path)[0]}_processed_gui.png"
-
-                    if grid_enabled:
-                        with Image.open(path) as source_img:
-                            with create_grid_canvas(
-                                [source_img] * grid_size,
-                                grid_size=grid_size,
-                                page_type=page,
-                                dpi=dpi,
-                            ) as canvas:
-                                save_image_for_printing(
-                                    img=canvas, output_path=final_output, dpi=dpi
-                                )
-
-                    else:
-                        with resize_image_to_cm(
-                            path, width_cm=w_cm, height_cm=h_cm, page_type=page, dpi=dpi
-                        ) as processed_img:
-                            save_image_for_printing(
-                                img=processed_img, output_path=final_output, dpi=dpi
-                            )
-
+        if result.success:
+            preview_target = result.output_paths[0]
             self.root.after(
                 0,
                 lambda: self._open_preview_modal(
-                    output_path=final_output, printer=printer, page=page
+                    output_paths=result.output_paths,
+                    printer=request.printer,
+                    page=request.page_type,
+                    preview_target=preview_target,
                 ),
             )
 
-        except exceptions.FastPrintError as e:
-            logger.exception("Error captured in the background print processing thread.")
-            error_clean_msg = exceptions.translate_exception(e)
+        else:
+            self.root.after(0, lambda: self._handle_error(result.error_message))
 
-            self.root.after(0, lambda: self._handle_error(err_msg=error_clean_msg))
-
-    def _open_preview_modal(self, output_path: str, printer: str, page: str):
+    def _open_preview_modal(
+        self, output_paths: list[str], printer: str, page: str, preview_target: str
+    ):
         """
         Creates a modern separate popup window for verifying layout components before printing
 
         Args:
-            output_path (str): Path of the target Images/Documents
+            output_paths list(str): List of all pages to print
             printer (str): Target device
             page (str): Page type (Letter, A4)
+            preview_target (str): Image path to show it on UI
         """
 
         self.action_btn.config(state="normal")
@@ -477,7 +399,7 @@ class FastPrintApp:
         display_lbl = ttk.Label(viewer_lf, anchor="center", justify="center")
         display_lbl.pack(fill=tk.BOTH, expand=True)
 
-        file_extension = os.path.splitext(output_path)[1].lower()
+        file_extension = os.path.splitext(preview_target)[1].lower()
 
         if file_extension in [".pdf", ".docx"]:
             display_lbl.config(
@@ -489,7 +411,7 @@ class FastPrintApp:
 
         else:
             try:
-                with Image.open(output_path) as img:
+                with Image.open(preview_target) as img:
                     preview_copy = img.copy()
                     preview_copy.thumbnail((360, 360), Image.Resampling.BILINEAR)
                     self.modal_preview_img_ref = ImageTk.PhotoImage(preview_copy)
@@ -509,7 +431,7 @@ class FastPrintApp:
             actions_frame,
             text="Imprimir ahora",
             command=lambda: self._send_to_hardware(
-                output_path=output_path, printer=printer, page=page, window=preview_win
+                output_paths=output_paths, printer=printer, page=page, window=preview_win
             ),
         )
         print_btn.pack(side=tk.RIGHT, fill=tk.X, expand=True, padx=(5, 0))
