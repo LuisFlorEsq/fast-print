@@ -26,14 +26,14 @@ build = [
 
 
 [tool.ruff]
-line-length = 88
+line-length = 98
 target-version = "py311"
 
 [tool.ruff.lint]
 select = [
-    "E",
-    "F",
-    "I",
+    "E", # pycodestyle
+    "F", # Pyflakes
+    "I", # isort
 ]
 
 [tool.mypy]

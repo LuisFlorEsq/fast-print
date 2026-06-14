@@ -3,6 +3,10 @@ class FastPrintException(Exception):
     pass
 
 
+class ValidationError(FastPrintException):
+    """Raised when user input validation fails"""
+
+
 class HardwareError(FastPrintException):
     """Launches when the physical printer or the Windows spooler reports an error"""
     pass
