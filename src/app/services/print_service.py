@@ -1,4 +1,5 @@
 import os
+import shutil
 import tempfile
 from contextlib import ExitStack
 from typing import List
@@ -130,3 +131,14 @@ class PrintService:
                 save_image_for_printing(img=canvas, output_path=output_path, dpi=TARGET_DPI)
 
         return output_path
+
+    def cleanup(self):
+        """
+        Clean a temporal folder and all its contents in a safe way
+        """
+        try:
+            if os.path.exists(self.temp_dir):
+                shutil.rmtree(self.temp_dir, ignore_errors=True)
+                logger.info("Principal folder deleted")
+        except Exception as e:
+            logger.warning(f"The temporal folder couldnt be deleted/cleaned: {e}")

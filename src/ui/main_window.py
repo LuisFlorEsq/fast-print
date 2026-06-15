@@ -5,11 +5,11 @@ from tkinter import filedialog, messagebox, ttk
 
 from PIL import Image, ImageTk
 
-from core.processing.docs.doc_strategy import print_document_smart
 from src.app.dto.print_request import PrintRequest
 from src.app.services.print_service import PrintService
 from src.core import exceptions
 from src.core.printer import PrintManager
+from src.core.processing.docs.doc_strategy import print_document_smart
 from src.utils import validators
 from src.utils.config import DOC_EXTENSIONS, IMAGE_EXTENSIONS
 from src.utils.logger import logger
@@ -53,6 +53,8 @@ class FastPrintApp:
 
         # References for visual preview tracking
         self.modal_preview_img_ref = None
+
+        self.root.protocol("WM_DELETE_WINDOW", self._on_app_close)
 
         self._build_ui()
         self._load_printers()
@@ -436,7 +438,7 @@ class FastPrintApp:
         )
         print_btn.pack(side=tk.RIGHT, fill=tk.X, expand=True, padx=(5, 0))
 
-    def _send_to_hardware(self, output_path: str, printer: str, page: str, window: tk.Toplevel):
+    def _send_to_hardware(self, output_paths: str, printer: str, page: str, window: tk.Toplevel):
         """
         Asynchronously dispatches the confirmed template target out to the physical spooler queue
 
@@ -456,19 +458,22 @@ class FastPrintApp:
         def print_worker():
             try:
                 print_manager = PrintManager()
-                file_extension = os.path.splitext(output_path)[1].lower()
 
-                if file_extension == ".pdf":
-                    print_manager.send_to_printer(
-                        file_path=output_path, printer_name=printer, page_type=page
-                    )
-                elif file_extension == ".docx":
-                    print_document_smart(file_path=output_path, printer_name=printer)
-                else:
-                    if os.path.exists(output_path):
+                for i, path in enumerate(output_paths, start=1):
+                    logger.info(f"Procesando página {i} de {len(output_paths)}: {path}")
+                    file_extension = os.path.splitext(path)[1].lower()
+
+                    if file_extension == ".pdf":
                         print_manager.send_to_printer(
-                            file_path=output_path, printer_name=printer, page_type=page
+                            file_path=path, printer_name=printer, page_type=page
                         )
+                    elif file_extension == ".docx":
+                        print_document_smart(file_path=path, printer_name=printer)
+                    else:
+                        if os.path.exists(path):
+                            print_manager.send_to_printer(
+                                file_path=path, printer_name=printer, page_type=page
+                            )
 
                 self.root.after(0, self._handle_success)
 
@@ -493,6 +498,14 @@ class FastPrintApp:
         self.action_btn.config(state="normal")
         self.status_lbl.config(text="Estado: Error en la cola de impresión.", foreground="red")
         messagebox.showerror("Error de Procesamiento", f"Ocurrió un fallo: {err_msg}")
+
+    def _on_app_close(self):
+        """
+        Ensure that resources are released before closing the window
+        """
+        logger.info("Starting application closing sequence")
+        self.print_service.cleanup()
+        self.root.destroy()
 
 
 if __name__ == "__main__":
