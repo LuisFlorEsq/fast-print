@@ -8,7 +8,7 @@ from PIL import Image, ImageTk
 from src.app.dto.print_request import PrintRequest
 from src.app.services.print_service import PrintService
 from src.core import exceptions
-from src.core.printer import PrintManager
+from src.core.printer_old import PrintManager
 from src.core.processing.docs.doc_strategy import print_document_smart
 from src.utils import validators
 from src.utils.config import DOC_EXTENSIONS, IMAGE_EXTENSIONS
