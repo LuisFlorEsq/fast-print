@@ -165,14 +165,21 @@ def print_document_smart(file_path: str, printer_name: Optional[str] = None) -> 
         file_path (str): Path to the target document
         printer_name (Optional[str], optional): Target hardware printer. Defaults to None.
     """
-
     word_strategy = WordComStrategy()
-    if word_strategy.execute_print(file_path=file_path, printer_name=printer_name):
-        return
+
+    try:
+        if word_strategy.execute_print(file_path=file_path, printer_name=printer_name):
+            return
+    except Exception as e:
+        logger.warning(f"Estrategia de Word fallo {e}. Intentando fallback...")
 
     libre_strategy = LibreOfficeStrategy()
-    if libre_strategy.execute_print(file_path=file_path, printer_name=printer_name):
-        return
+
+    try:
+        if libre_strategy.execute_print(file_path=file_path, printer_name=printer_name):
+            return
+    except Exception as e:
+        logger.warning(f"Estrategia de LibreOffice falló: {e}")
 
     raise DocumentProcessingError(
         "No se puede imprimir el documento."

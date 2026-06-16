@@ -12,8 +12,8 @@ class DeviceCaps(IntEnum):
     """
     Hardware limitations for win32ui
     """
-    HResolution = 8
-    VResolution = 10
+    WResolution = 8
+    HResolution = 10
     
 
 DEFAULT_QUEUE_TIMEOUT = 120

@@ -7,7 +7,7 @@ from src.core.exceptions import HardwareError
 from src.utils.logger import logger
 
 
-class NativePDFStrategy:
+class PDFStrategy:
     """
     Strategy to print PDF documents by using Windows default viewer
     """

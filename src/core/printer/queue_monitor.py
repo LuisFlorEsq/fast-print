@@ -1,9 +1,10 @@
 import time
-import win32print
-from src.core.exceptions import HardwareError, QueueTimeoutError
-from src.utils.logger import logger
 
+import win32print
+
+from src.core.exceptions import HardwareError, QueueTimeoutError
 from src.core.printer.constants import INITIAL_POLL_INTERVAL, MAX_POLL_INTERVAL
+from src.utils.logger import logger
 
 
 class PrintQueueMonitor:
