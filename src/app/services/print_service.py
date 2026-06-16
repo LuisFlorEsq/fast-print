@@ -9,6 +9,8 @@ from PIL import Image
 from src.app.dto.print_request import PrintRequest
 from src.app.dto.print_result import PrintResult
 from src.core.exceptions import translate_exception
+from src.core.printer.factory import PrintStrategyFactory
+from src.core.printer.manager import PrintManager
 from src.core.processing.images.grid import create_grid_canvas
 from src.core.processing.images.image import resize_image_to_cm, save_image_for_printing
 from src.utils.config import IMAGE_EXTENSIONS, TARGET_DPI
@@ -131,6 +133,26 @@ class PrintService:
                 save_image_for_printing(img=canvas, output_path=output_path, dpi=TARGET_DPI)
 
         return output_path
+
+    def execute_hardware_dispatch(
+        self, output_paths: list[str], printer: str, page_type: str
+    ) -> None:
+        """
+        Dispatches the print job to the correct strategy
+
+        Args:
+            output_paths (list[str]): Output paths of the files to print
+            printer (str): Target device
+            page_type (str): Page size
+        """
+        manager = PrintManager()
+
+        for i, path in enumerate(output_paths, start=1):
+            logger.info(f"Sending job to hardware {i}/{len(output_paths)}: {path}")
+
+            strategy = PrintStrategyFactory.get_strategy(file_path=path, page_type=page_type)
+
+            manager.execute_job(strategy=strategy, file_path=path, printer_name=printer)
 
     def cleanup(self):
         """

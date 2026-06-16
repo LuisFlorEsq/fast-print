@@ -27,20 +27,17 @@ def setup_app_logger() -> logging.Logger:
         log_file,
         maxBytes=5 * 1024 * 1024,  # 5 MB
         backupCount=3,
-        encoding="utf-8"
+        encoding="utf-8",
     )
 
     formatter = logging.Formatter(
-        "[%(asctime)s] %(levelname)s "
-        "[%(name)s] "
-        "[%(filename)s:%(lineno)d] "
-        "- %(message)s",
-        datefmt="%Y-%m-%d %H:%M:%S"
+        "[%(asctime)s] %(levelname)s [%(name)s] [%(filename)s:%(lineno)d] - %(message)s",
+        datefmt="%Y-%m-%d %H:%M:%S",
     )
 
     handler.setFormatter(formatter)
     logger.addHandler(handler)
-    
+
     return logger
 
 

@@ -5,7 +5,7 @@ class PrintStrategy(ABC):
     """
     Base interface for all print strategies
     """
-    
+
     @abstractmethod
     def execute_print(self, file_path: str, printer_name: str) -> bool:
         """

@@ -4,8 +4,8 @@ import win32print
 import win32ui
 from PIL import Image, ImageWin
 
+from core.printer.strategies.base_strategy import PrintStrategy
 from src.core.exceptions import HardwareError
-from src.core.printer.base_strategy import PrintStrategy
 from src.core.printer.constants import DeviceCaps, PaperSize
 from src.utils.logger import logger
 

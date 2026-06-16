@@ -54,9 +54,7 @@ def resize_image_to_cm(
     canvas = Image.new("RGB", (page_w, page_h), "white")
 
     if width_cm is None and height_cm is None:
-        raise ImageProcessingError(
-            "Image dimensions were not validated before processing."
-        )
+        raise ImageProcessingError("Image dimensions were not validated before processing.")
 
     with Image.open(input_path) as img:
         orig_w, orig_h = img.size

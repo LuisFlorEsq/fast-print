@@ -59,7 +59,8 @@ def apply_windows_api_hooks():
         print("Entorno de registro verificado con exito")
 
     else:
-        print("Aviso: No se encontro pywin32_post_install..py en .venv. Asegúrate de que las DLLs de spooler estén mapeadas.")
+        print("Aviso: No se encontro pywin32_post_install..py en .venv."
+              "Asegúrate de que las DLLs de spooler estén mapeadas.")
 
 
 def package_distribution_zip():

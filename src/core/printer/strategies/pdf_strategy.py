@@ -7,11 +7,11 @@ from src.core.exceptions import HardwareError
 from src.utils.logger import logger
 
 
-class PDFStrategy:
+class PDFPrintStrategy:
     """
     Strategy to print PDF documents by using Windows default viewer
     """
-    
+
     def execute_print(self, file_path: str, printer_name: str) -> bool:
         """
         Executes document print using the windows native approach
@@ -27,20 +27,20 @@ class PDFStrategy:
         try:
             old_printer = win32print.GetDefaultPrinter()
             win32print.SetDefaultPrinter(printer_name)
-            
+
             win32api.ShellExecute(0, "print", file_path, None, ".", 0)
-            
+
             time.sleep(0.2)
-            
+
             return True
-        
+
         except Exception as e:
             logger.exception("Fail on the native subsystem while processing PDF")
             raise HardwareError(
                 f"The OS could not print the PDF, verify that you have "
                 f"a default lector (e.g. Edge, Acrobat) set: {str(e)}"
             ) from e
-            
+
         finally:
             if old_printer:
                 try:

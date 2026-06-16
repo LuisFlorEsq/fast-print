@@ -131,9 +131,7 @@ def validate_docx_file(path: str) -> None:
 # ---------------------------------------------
 
 
-def validate_image_fits(
-    width_cm: float | None, height_cm: float | None, page_type: str
-) -> None:
+def validate_image_fits(width_cm: float | None, height_cm: float | None, page_type: str) -> None:
     """
     Checks if the user input dimensions for resizing an image fits on the selected page
 

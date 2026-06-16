@@ -5,16 +5,19 @@ class PaperSize(IntEnum):
     """
     Standard paper size for windows API
     """
+
     LETTER = 1
     A4 = 9
-    
+
+
 class DeviceCaps(IntEnum):
     """
     Hardware limitations for win32ui
     """
+
     WResolution = 8
     HResolution = 10
-    
+
 
 DEFAULT_QUEUE_TIMEOUT = 120
 INITIAL_POLL_INTERVAL = 0.25
