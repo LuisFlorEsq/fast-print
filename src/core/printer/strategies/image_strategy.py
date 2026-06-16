@@ -4,9 +4,9 @@ import win32print
 import win32ui
 from PIL import Image, ImageWin
 
-from core.printer.strategies.base_strategy import PrintStrategy
 from src.core.exceptions import HardwareError
 from src.core.printer.constants import DeviceCaps, PaperSize
+from src.core.printer.strategies.base_strategy import PrintStrategy
 from src.utils.logger import logger
 
 
@@ -53,8 +53,8 @@ class ImagePrintStrategy(PrintStrategy):
             hdc.StartDoc(f"FastPrint_Img_{os.path.basename(file_path)}")
             hdc.StartPage()
 
-            printer_w = hdc.GetDeviceCaps(DeviceCaps.HORZRES.value)
-            printer_h = hdc.GetDeviceCaps(DeviceCaps.VERTRES.value)
+            printer_w = hdc.GetDeviceCaps(DeviceCaps.WResolution.value)
+            printer_h = hdc.GetDeviceCaps(DeviceCaps.HResolution.value)
 
             with Image.open(file_path) as img:
                 dib = ImageWin.Dib(img)

@@ -2,8 +2,8 @@ import sys
 
 import win32print
 
-from core.printer.strategies.base_strategy import PrintStrategy
 from src.core.printer.queue_monitor import PrintQueueMonitor
+from src.core.printer.strategies.base_strategy import PrintStrategy
 from src.utils.logger import logger
 
 

@@ -9,7 +9,6 @@ from src.app.dto.print_request import PrintRequest
 from src.app.services.print_service import PrintService
 from src.core import exceptions
 from src.core.printer_old import PrintManager
-from src.core.processing.docs.doc_strategy import print_document_smart
 from src.utils import validators
 from src.utils.config import DOC_EXTENSIONS, IMAGE_EXTENSIONS
 from src.utils.logger import logger
@@ -457,23 +456,9 @@ class FastPrintApp:
 
         def print_worker():
             try:
-                print_manager = PrintManager()
-
-                for i, path in enumerate(output_paths, start=1):
-                    logger.info(f"Procesando página {i} de {len(output_paths)}: {path}")
-                    file_extension = os.path.splitext(path)[1].lower()
-
-                    if file_extension == ".pdf":
-                        print_manager.send_to_printer(
-                            file_path=path, printer_name=printer, page_type=page
-                        )
-                    elif file_extension == ".docx":
-                        print_document_smart(file_path=path, printer_name=printer)
-                    else:
-                        if os.path.exists(path):
-                            print_manager.send_to_printer(
-                                file_path=path, printer_name=printer, page_type=page
-                            )
+                self.print_service.execute_hardware_dispatch(
+                    output_paths=output_paths, printer=printer, page_type=page
+                )
 
                 self.root.after(0, self._handle_success)
 

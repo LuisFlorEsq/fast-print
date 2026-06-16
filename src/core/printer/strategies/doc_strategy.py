@@ -3,8 +3,8 @@ import subprocess
 import time
 from typing import Optional
 
-from core.printer.strategies.base_strategy import PrintStrategy
 from src.core.exceptions import DocumentProcessingError
+from src.core.printer.strategies.base_strategy import PrintStrategy
 from src.utils.logger import logger
 
 try:
