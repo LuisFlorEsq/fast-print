@@ -491,10 +491,3 @@ class FastPrintApp:
         logger.info("Starting application closing sequence")
         self.print_service.cleanup()
         self.root.destroy()
-
-
-if __name__ == "__main__":
-    logger.info("FastPrint application starting")
-    root = tk.Tk()
-    app = FastPrintApp(root)
-    root.mainloop()

@@ -18,10 +18,23 @@ from src.utils.logger import logger
 
 
 class PrintService:
-    def __init__(self):
+    """
+    Application service handling the core bussines logic for printing operations
+    """
+
+    def __init__(self, print_manager: PrintManager, strategy_factory: PrintStrategyFactory):
         """
-        Temporary directory persistent during user session
+        Initializes the PrintService with its required dependencies
+
+        Args:
+            print_manager (PrintManager): The orchestrator for hardware print jobs.
+            strategy_factory (PrintStrategyFactory): The factory to resolve print strategies.
         """
+        # Core components initialization
+        self.print_manager = print_manager
+        self.strategy_factory = strategy_factory
+
+        # Temporary directory for the current session
         self.temp_dir = os.path.join(tempfile.gettempdir(), "FastPrint_Temp")
         os.makedirs(self.temp_dir, exist_ok=True)
 
@@ -145,14 +158,14 @@ class PrintService:
             printer (str): Target device
             page_type (str): Page size
         """
-        manager = PrintManager()
-
         for i, path in enumerate(output_paths, start=1):
             logger.info(f"Sending job to hardware {i}/{len(output_paths)}: {path}")
 
-            strategy = PrintStrategyFactory.get_strategy(file_path=path, page_type=page_type)
+            strategy = self.strategy_factory.get_strategy(file_path=path, page_type=page_type)
 
-            manager.execute_job(strategy=strategy, file_path=path, printer_name=printer)
+            self.print_manager.execute_job(
+                strategy=strategy, file_path=path, printer_name=printer
+            )
 
     def cleanup(self):
         """
